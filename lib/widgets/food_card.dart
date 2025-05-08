@@ -1,5 +1,3 @@
-// lib/widgets/food_card.dart
-
 import 'package:flutter/material.dart';
 import '../models/food_model.dart';
 
@@ -11,9 +9,11 @@ class FoodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -22,7 +22,7 @@ class FoodCard extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             child: Image.asset(
               food.imageUrl,
-              height: 150,
+              height: 120, // lebih kecil agar tidak overflow
               width: double.infinity,
               fit: BoxFit.cover,
             ),
@@ -35,20 +35,20 @@ class FoodCard extends StatelessWidget {
                 // Nama Makanan
                 Text(
                   food.name,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
 
-                // Deskripsi Makanan
+                // Deskripsi
                 Text(
                   food.description,
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 14,
+                    fontSize: 13,
                     color: Colors.grey[600],
                   ),
                   maxLines: 2,
@@ -56,17 +56,16 @@ class FoodCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Harga Makanan
+                // Harga
                 Text(
                   "Rp ${food.price}",
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.orange,
                   ),
                 ),
-                const SizedBox(height: 12),
               ],
             ),
           ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+import '../models/food_model.dart';
 import '../services/mock_data.dart';
 import '../widgets/custom_bottom_navigation_bar.dart';
 import '../widgets/food_card.dart';
+import '../widgets/food_detail_dialog.dart'; // Pastikan import ini ada
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -13,13 +14,11 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   int _selectedIndex = 1;
+  bool _showFoods = true;
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
 
     switch (index) {
       case 0:
@@ -40,6 +39,18 @@ class _MenuScreenState extends State<MenuScreen> {
     }
   }
 
+  void _showFoodDetail(FoodModel food) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(20), // Padding untuk dialog
+        backgroundColor: Colors.transparent,
+        child: FoodDetailDialog(
+            food: food), // Gunakan widget dialog yang sudah ada
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,41 +60,80 @@ class _MenuScreenState extends State<MenuScreen> {
           'Menu Kami',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.primaryColor,
+            color: Colors.orange,
+            fontSize: 22,
           ),
         ),
         centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
+        elevation: 2,
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
+      body: Container(
+        color: Colors.grey[50],
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Text(
-              'Nikmati Kelezatan Nusantara',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+            const SizedBox(height: 16),
+            // Toggle Button
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => setState(() => _showFoods = true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _showFoods ? Colors.orange : Colors.grey[300],
+                      foregroundColor: _showFoods ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Makanan'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => setState(() => _showFoods = false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          !_showFoods ? Colors.orange : Colors.grey[300],
+                      foregroundColor:
+                          !_showFoods ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Minuman'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
+            // GridView Menu
             Expanded(
               child: GridView.builder(
+                padding: const EdgeInsets.only(bottom: 20),
+                physics: const BouncingScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 0.72,
                 ),
-                itemCount: MockData.foods.length,
+                itemCount:
+                    _showFoods ? MockData.foods.length : MockData.drinks.length,
                 itemBuilder: (context, index) {
-                  final food = MockData.foods[index];
-                  return FoodCard(
-                    food: food,
+                  final item = _showFoods
+                      ? MockData.foods[index]
+                      : MockData.drinks[index];
+                  return GestureDetector(
+                    onTap: () =>
+                        _showFoodDetail(item), // Panggil dialog di sini
+                    child: FoodCard(food: item),
                   );
                 },
               ),

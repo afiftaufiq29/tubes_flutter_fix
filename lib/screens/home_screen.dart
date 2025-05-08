@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/custom_bottom_navigation_bar.dart';
+import 'dart:ui';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,51 +21,67 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showAppBar = true;
   double _scrollPosition = 0;
+  late GoogleMapController _mapController;
+  final LatLng _restaurantLocation =
+      const LatLng(-6.966667, 107.633333); // Example coordinates for Bandung
+  bool _mapExpanded = false;
+  double _mapHeight = 150;
 
   final List<Map<String, dynamic>> topMenus = [
     // Foods
     {
       'title': 'Nasi Padang Komplit',
       'image': 'assets/images/food_images/pempek.jpg',
-      'price': 'Rp 45.000',
+      'price': '45.000',
       'rating': 4.8,
       'category': 'food',
+      'description':
+          'Nasi Padang komplit dengan berbagai lauk pilihan seperti rendang, gulai, dan sambal balado.',
     },
     {
       'title': 'Ayam Bakar Taliwang',
       'image': 'assets/images/food_images/ayam_betutu.jpg',
-      'price': 'Rp 55.000',
+      'price': '55.000',
       'rating': 4.9,
       'category': 'food',
+      'description':
+          'Ayam bakar khas Lombok dengan bumbu pedas dan rempah yang khas.',
     },
     {
       'title': 'Sate Ayam Madura',
       'image': 'assets/images/food_images/sate.jpg',
-      'price': 'Rp 35.000',
+      'price': '35.000',
       'rating': 4.7,
       'category': 'food',
+      'description':
+          'Sate ayam dengan bumbu kacang khas Madura yang gurih dan lezat.',
     },
     // Drinks
     {
       'title': 'Es Cendol Segar',
       'image': 'assets/images/drink_images/es_cendol.jpg',
-      'price': 'Rp 18.000',
+      'price': '18.000',
       'rating': 4.7,
       'category': 'drink',
+      'description':
+          'Minuman tradisional dengan cendol, santan, dan gula merah yang menyegarkan.',
     },
     {
       'title': 'Es Teh Manis',
       'image': 'assets/images/drink_images/es_teh.jpg',
-      'price': 'Rp 12.000',
+      'price': '12.000',
       'rating': 4.5,
       'category': 'drink',
+      'description': 'Es teh manis khas Indonesia dengan aroma teh yang harum.',
     },
     {
       'title': 'Jus Alpukat',
       'image': 'assets/images/drink_images/jus_alpukat.jpg',
-      'price': 'Rp 25.000',
+      'price': '25.000',
       'rating': 4.8,
       'category': 'drink',
+      'description':
+          'Jus alpukat kental dengan susu dan sirup coklat yang lezat.',
     },
   ];
 
@@ -77,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _pageController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -126,17 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 1:
-        Navigator.pushNamed(context, '/menu').then((_) {
-          if (mounted) setState(() => _selectedIndex = 0);
-        });
-        break;
       case 2:
-        Navigator.pushNamed(context, '/about').then((_) {
-          if (mounted) setState(() => _selectedIndex = 0);
-        });
-        break;
       case 3:
-        Navigator.pushNamed(context, '/profile').then((_) {
+        Navigator.pushNamed(context, '/menu').then((_) {
           if (mounted) setState(() => _selectedIndex = 0);
         });
         break;
@@ -145,10 +159,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleSearch() {
     if (_searchQuery.isNotEmpty) {
-      Navigator.pushNamed(context, '/menu', arguments: {
-        'searchQuery': _searchQuery,
-      });
+      // Cari item yang cocok
+      final matchingItem = topMenus.firstWhere(
+        (menu) =>
+            menu['title']!.toLowerCase().contains(_searchQuery.toLowerCase()),
+        orElse: () => {},
+      );
+
+      if (matchingItem.isNotEmpty) {
+        // Scroll ke item yang cocok
+        final index = topMenus.indexOf(matchingItem);
+        final offset = (index * 120.0) + 400.0; // Perkiraan posisi scroll
+        _scrollController.animateTo(
+          offset,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+
+        // Trigger rebuild
+        setState(() {});
+      } else {
+        // Tampilkan snackbar jika tidak ditemukan
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Tidak ditemukan menu dengan kata kunci "$_searchQuery"'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
+  }
+
+  Future<void> _openGoogleMaps() async {
+    final url =
+        'https://www.google.com/maps/search/?api=1&query=${_restaurantLocation.latitude},${_restaurantLocation.longitude}';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  void _toggleMapSize() {
+    setState(() {
+      _mapExpanded = !_mapExpanded;
+      _mapHeight = _mapExpanded ? 300 : 150;
+    });
   }
 
   @override
@@ -263,52 +320,133 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(color: Colors.grey[300]!),
                     ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        // Open full map view or Google Maps
-                      },
-                      highlightColor: Colors.transparent,
-                      splashColor: Colors.orange.withOpacity(0.1),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.location_on_outlined,
-                                    color: Colors.orange[400]),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Ruko Buah Batu',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.grey[800],
-                                            ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on_outlined,
+                                  color: Colors.orange[400]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Ruko Buah Batu',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.grey[800],
                                           ),
-                                          const Icon(
-                                            Icons.check_circle,
-                                            color: Colors.green,
-                                            size: 20,
-                                          ),
-                                        ],
+                                        ),
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green,
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Jl. Terusan Buah Batu No.5, Batununggal, Kec. Bandung Kidul, Kota Bandung, Jawa Barat 40266',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Jl. Terusan Buah Batu No.5, Batununggal, Kec. Bandung Kidul, Kota Bandung, Jawa Barat 40266',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          height: _mapHeight,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                            color: Colors.grey[200],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                            child: Stack(
+                              children: [
+                                GoogleMap(
+                                  initialCameraPosition: CameraPosition(
+                                    target: _restaurantLocation,
+                                    zoom: 15,
+                                  ),
+                                  onMapCreated: (controller) {
+                                    setState(() {
+                                      _mapController = controller;
+                                    });
+                                  },
+                                  markers: {
+                                    Marker(
+                                      markerId: const MarkerId('restaurant'),
+                                      position: _restaurantLocation,
+                                      infoWindow: const InfoWindow(
+                                        title: 'Masakan Nusantara',
+                                      ),
+                                      icon:
+                                          BitmapDescriptor.defaultMarkerWithHue(
+                                        BitmapDescriptor.hueOrange,
+                                      ),
+                                    ),
+                                  },
+                                  gestureRecognizers: <Factory<
+                                      OneSequenceGestureRecognizer>>{
+                                    Factory<OneSequenceGestureRecognizer>(
+                                      () => EagerGestureRecognizer(),
+                                    ),
+                                  },
+                                  scrollGesturesEnabled: true,
+                                  zoomGesturesEnabled: true,
+                                  tiltGesturesEnabled: false,
+                                  rotateGesturesEnabled: false,
+                                  mapType: MapType.normal,
+                                  zoomControlsEnabled: false,
+                                  myLocationButtonEnabled: false,
+                                ),
+                                Positioned(
+                                  bottom: 10,
+                                  right: 10,
+                                  child: Column(
+                                    children: [
+                                      FloatingActionButton(
+                                        heroTag: 'expand',
+                                        mini: true,
+                                        backgroundColor: Colors.white,
+                                        onPressed: _toggleMapSize,
+                                        child: Icon(
+                                          _mapExpanded
+                                              ? Icons.fullscreen_exit
+                                              : Icons.fullscreen,
+                                          color: Colors.orange[400],
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      FloatingActionButton(
+                                        heroTag: 'navigate',
+                                        mini: true,
+                                        backgroundColor: Colors.white,
+                                        onPressed: _openGoogleMaps,
+                                        child: Icon(
+                                          Icons.navigation,
+                                          color: Colors.orange[400],
+                                          size: 20,
                                         ),
                                       ),
                                     ],
@@ -316,27 +454,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            Container(
-                              height: 150,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: Colors.grey[200],
-                                image: const DecorationImage(
-                                  image: AssetImage(
-                                      'assets/images/drink_images/map_placeholder.jpg'),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  Center(),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
 
@@ -369,69 +489,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Food Menu Section
-                  if (topMenus.any((menu) =>
-                      menu['category'] == 'food' &&
-                      menu['title']!.toLowerCase().contains(_searchQuery)))
+                  // Search results or all menus
+                  if (_searchQuery.isNotEmpty)
+                    _buildSearchResults()
+                  else
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Makanan Populer',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                        // Food Menu Section
+                        if (topMenus.any((menu) => menu['category'] == 'food'))
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Makanan Populer',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ...topMenus
+                                  .where((menu) => menu['category'] == 'food')
+                                  .map((menu) => _buildMenuItem(
+                                        menu['title']!,
+                                        menu['image']!,
+                                        menu['price']!,
+                                        menu['rating']!,
+                                        menu['description']!,
+                                        false,
+                                      ))
+                                  .toList(),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...topMenus
-                            .where((menu) =>
-                                menu['category'] == 'food' &&
-                                menu['title']!
-                                    .toLowerCase()
-                                    .contains(_searchQuery))
-                            .map((menu) => _buildMenuItem(
-                                  menu['title']!,
-                                  menu['image']!,
-                                  menu['price']!,
-                                  menu['rating']!,
-                                ))
-                            .toList(),
-                      ],
-                    ),
 
-                  const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                  // Drink Menu Section
-                  if (topMenus.any((menu) =>
-                      menu['category'] == 'drink' &&
-                      menu['title']!.toLowerCase().contains(_searchQuery)))
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Minuman Populer',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                        // Drink Menu Section
+                        if (topMenus.any((menu) => menu['category'] == 'drink'))
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Minuman Populer',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ...topMenus
+                                  .where((menu) => menu['category'] == 'drink')
+                                  .map((menu) => _buildMenuItem(
+                                        menu['title']!,
+                                        menu['image']!,
+                                        menu['price']!,
+                                        menu['rating']!,
+                                        menu['description']!,
+                                        false,
+                                      ))
+                                  .toList(),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...topMenus
-                            .where((menu) =>
-                                menu['category'] == 'drink' &&
-                                menu['title']!
-                                    .toLowerCase()
-                                    .contains(_searchQuery))
-                            .map((menu) => _buildMenuItem(
-                                  menu['title']!,
-                                  menu['image']!,
-                                  menu['price']!,
-                                  menu['rating']!,
-                                ))
-                            .toList(),
                       ],
                     ),
 
@@ -449,22 +570,68 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuItem(
-      String title, String imagePath, String price, double rating) {
+  Widget _buildSearchResults() {
+    final matchingItems = topMenus
+        .where((menu) => menu['title']!.toLowerCase().contains(_searchQuery))
+        .toList();
+
+    if (matchingItems.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Text(
+            'Tidak ditemukan menu dengan kata kunci "$_searchQuery"',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hasil Pencarian',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...matchingItems
+            .map((menu) => _buildMenuItem(
+                  menu['title']!,
+                  menu['image']!,
+                  menu['price']!,
+                  menu['rating']!,
+                  menu['description']!,
+                  true,
+                ))
+            .toList(),
+      ],
+    );
+  }
+
+  Widget _buildMenuItem(String title, String imagePath, String price,
+      double rating, String description, bool isHighlighted) {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[300]!),
+        side: BorderSide(
+          color: isHighlighted ? Colors.orange[400]! : Colors.grey[300]!,
+          width: isHighlighted ? 2 : 1,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.pushNamed(context, '/menu-detail', arguments: {
-            'title': title,
-            'image': imagePath,
-          });
+          _showFoodDetailDialog(title, imagePath, price, rating, description);
         },
         highlightColor: Colors.transparent,
         splashColor: Colors.orange.withOpacity(0.1),
@@ -504,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      price,
+                      'Rp $price',
                       style: TextStyle(
                         color: Colors.orange[400],
                         fontWeight: FontWeight.bold,
@@ -533,6 +700,105 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showFoodDetailDialog(String title, String imagePath, String price,
+      double rating, String description) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        imagePath,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: Icon(Icons.fastfood, size: 50),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: Colors.amber[400]),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating.toString(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          "Rp $price",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text("Tutup"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -7,6 +7,7 @@ class FoodModel {
   final double price;
   final String imageUrl;
   final bool isAvailable;
+  final double rating; // tambahkan ini
 
   FoodModel({
     required this.id,
@@ -15,6 +16,7 @@ class FoodModel {
     required this.price,
     required this.imageUrl,
     this.isAvailable = true,
+    this.rating = 4.0,
   });
 
   // Factory method untuk membuat objek dari JSON
@@ -26,6 +28,7 @@ class FoodModel {
       price: json['price'].toDouble(),
       imageUrl: json['imageUrl'],
       isAvailable: json['isAvailable'] ?? true,
+      rating: json['rating']?.toDouble() ?? 4.0,
     );
   }
 
