@@ -1,68 +1,99 @@
-// lib/screens/menu_screen.dart
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../services/mock_data.dart';
+import '../widgets/custom_bottom_navigation_bar.dart';
 import '../widgets/food_card.dart';
 
-class MenuScreen extends StatelessWidget {
-  const MenuScreen({super.key, this.reservationData, this.preorder = false});
+class MenuScreen extends StatefulWidget {
+  const MenuScreen({super.key});
 
-  final Map<String, dynamic>? reservationData;
-  final bool preorder;
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  int _selectedIndex = 1;
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        break;
+      case 1:
+        break;
+      case 2:
+        Navigator.pushNamed(context, '/about').then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
+        });
+        break;
+      case 3:
+        Navigator.pushNamed(context, '/profile').then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
+        });
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Get arguments if coming from navigation
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final reservationData = args?['reservationData'] ?? this.reservationData;
-    final preorder = args?['preorder'] ?? this.preorder;
-
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Menu Makanan"),
-        backgroundColor: Colors.orange,
+        title: const Text(
+          'Menu Kami',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryColor,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
       ),
-      body: Column(
-        children: [
-          if (reservationData != null)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Detail Reservasi:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text('Nama: ${reservationData['nama']}'),
-                      Text('Telepon: ${reservationData['telepon']}'),
-                      Text(
-                        'Tanggal: ${reservationData['tanggal'].split('T')[0]}',
-                      ),
-                      Text('Waktu: ${reservationData['waktu']}'),
-                      if (preorder)
-                        const Text(
-                          'Silakan pilih makanan yang ingin dipesan:',
-                          style: TextStyle(fontStyle: FontStyle.italic),
-                        ),
-                    ],
-                  ),
-                ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              'Nikmati Kelezatan Nusantara',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
               ),
             ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: MockData.foods.length,
-              itemBuilder: (context, index) {
-                final food = MockData.foods[index];
-                return FoodCard(food: food);
-              },
+            const SizedBox(height: 16),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.75,
+                ),
+                itemCount: MockData.foods.length,
+                itemBuilder: (context, index) {
+                  final food = MockData.foods[index];
+                  return FoodCard(
+                    food: food,
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }

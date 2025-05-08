@@ -7,14 +7,13 @@ import 'screens/menu_screen.dart';
 import 'screens/reservation_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/preorder_screen.dart';
-import 'screens/schedule_picker_screen.dart';
 import 'screens/payment_screen.dart';
-import 'screens/payment_success_screen.dart';
-import 'screens/order_status_screen.dart';
 import 'screens/login_screen.dart';
 import 'constants/app_colors.dart';
 import 'constants/app_styles.dart';
 import 'widgets/food_card.dart';
+import 'package:tubes_flutter/screens/menu_screen_reservation.dart'
+    as menu_resv;
 
 void main() {
   runApp(const MyApp());
@@ -53,7 +52,9 @@ class MyApp extends StatelessWidget {
           backgroundColor: AppColors.buttonColorPrimary,
           foregroundColor: AppColors.textColorLight,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       ),
       textTheme: TextTheme(
@@ -71,31 +72,30 @@ class MyApp extends StatelessWidget {
       '/login': (context) => const LoginScreen(),
       '/home': (context) => const HomeScreen(),
       '/about': (context) => const AboutScreen(),
-      '/menu': (context) {
-        final args = ModalRoute.of(context)?.settings.arguments;
-        return MenuScreen(
-          reservationData: args is Map ? args['reservationData'] : null,
-          preorder: args is Map ? args['preorder'] ?? false : false,
-        );
-      },
+      '/menu': (context) => const MenuScreen(),
       '/reservation': (context) => const ReservationScreen(),
       '/profile': (context) => const ProfileScreen(),
       '/preorder': (context) => const PreorderScreen(),
-      '/schedule-picker': (context) => const SchedulePickerScreen(),
+      '/menu-reservation': (context) => const menu_resv.MenuScreenReservation(),
       '/payment': (context) {
-        final args = ModalRoute.of(context)?.settings.arguments;
-        if (args is Map<String, dynamic> && args['totalAmount'] != null) {
-          final double totalAmount = args['totalAmount'];
-          return PaymentScreen(totalAmount: totalAmount);
+        final args =
+            ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        if (args != null &&
+            args['reservationData'] != null &&
+            args['selectedItems'] != null &&
+            args['totalAmount'] != null) {
+          return PaymentScreen(
+            reservationData: args['reservationData'],
+            selectedItems: args['selectedItems'],
+            totalAmount: args['totalAmount'],
+          );
         } else {
           return Scaffold(
             appBar: AppBar(title: const Text('Kesalahan')),
-            body: const Center(child: Text('Total pembayaran tidak tersedia.')),
+            body: const Center(child: Text('Data pembayaran tidak lengkap.')),
           );
         }
       },
-      '/payment-success': (context) => const PaymentSuccessScreen(),
-      '/order-status': (context) => const OrderStatusScreen(),
       '/food-cart': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         if (args is FoodModel) {
