@@ -7,6 +7,14 @@ class FoodDetailDialog extends StatelessWidget {
 
   const FoodDetailDialog({super.key, required this.food});
 
+  // Fungsi untuk formatting harga Indonesia
+  String _formatHarga(int harga) {
+    return 'Rp ${harga.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        )}';
+  }
+
   @override
   Widget build(BuildContext context) {
     // Deskripsi menggoda berdasarkan nama makanan
@@ -86,21 +94,27 @@ class FoodDetailDialog extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins', // Tambahkan font Poppins
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     foodDescription,
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Poppins', // Tambahkan font Poppins
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "Rp ${food.price}",
+                    _formatHarga(
+                        food.price.toInt()), // Gunakan fungsi format harga
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.orange,
+                      fontFamily: 'Poppins', // Tambahkan font Poppins
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -115,7 +129,10 @@ class FoodDetailDialog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                     ),
-                    child: const Text("Tutup"),
+                    child: const Text(
+                      "Tutup",
+                      style: TextStyle(fontFamily: 'Poppins'),
+                    ),
                   ),
                 ],
               ),

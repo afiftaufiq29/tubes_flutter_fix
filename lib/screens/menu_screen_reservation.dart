@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_flutter/screens/payment_screen.dart';
 import '../services/mock_data.dart';
+import '../models/food_model.dart';
 
 class MenuScreenReservation extends StatefulWidget {
   final Map<String, dynamic>? reservationData;
   final bool preorder;
-
-  const MenuScreenReservation(
-      {super.key, this.reservationData, this.preorder = false});
+  const MenuScreenReservation({
+    super.key,
+    this.reservationData,
+    this.preorder = false,
+  });
 
   @override
   State<MenuScreenReservation> createState() => _MenuScreenReservationState();
@@ -17,6 +20,12 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
   Map<String, int> selectedItems = {};
   double totalAmount = 0.0;
   bool showPaymentBar = false;
+
+  // Pindahkan deklarasi fungsi helper ke atas
+  FoodModel? getItemById(String id) {
+    return MockData.foods.firstWhereOrNull((f) => f.id == id) ??
+        MockData.drinks.firstWhereOrNull((d) => d.id == id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +43,15 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
           selectedItems.remove(foodId);
         }
 
+        // Reset total amount
         totalAmount = 0.0;
+
+        // Calculate total amount for both foods and drinks
         selectedItems.forEach((id, qty) {
-          final food = MockData.foods.firstWhere((f) => f.id == id);
-          totalAmount += food.price * qty;
+          final item = getItemById(id);
+          if (item != null) {
+            totalAmount += item.price * qty;
+          }
         });
 
         showPaymentBar = selectedItems.isNotEmpty;
@@ -45,12 +59,30 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
     }
 
     void proceedToPayment() {
+      // Prepare list of selected items with details
+      List<Map<String, dynamic>> itemsWithDetails = [];
+
+      selectedItems.forEach((id, quantity) {
+        final item = getItemById(id);
+        if (item != null) {
+          itemsWithDetails.add({
+            'id': item.id,
+            'name': item.name,
+            'price': item.price,
+            'quantity': quantity,
+            'imageUrl': item.imageUrl,
+            'isDrink': MockData.drinks.any((d) => d.id == id),
+          });
+        }
+      });
+
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         builder: (context) => PaymentSummarySheet(
           reservationData: effectiveReservationData,
           selectedItems: selectedItems,
+          itemsWithDetails: itemsWithDetails,
           totalAmount: totalAmount,
         ),
       );
@@ -59,11 +91,13 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Menu Makanan",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            )),
+        title: const Text(
+          "Menu Makanan & Minuman",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -79,7 +113,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey[300]!),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -89,7 +123,9 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                       const Text(
                         'Detail Reservasi:',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _buildDetailRow('Nama', effectiveReservationData['nama']),
@@ -103,10 +139,11 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                         const Padding(
                           padding: EdgeInsets.only(top: 8.0),
                           child: Text(
-                            'Silakan pilih makanan yang ingin dipesan:',
+                            'Silakan pilih makanan/minuman yang ingin dipesan:',
                             style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: Colors.grey),
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
                     ],
@@ -115,19 +152,34 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
               ),
             ),
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: MockData.foods.length,
+              itemCount: MockData.foods.length + MockData.drinks.length + 1,
               itemBuilder: (context, index) {
-                final food = MockData.foods[index];
-                final quantity = selectedItems[food.id] ?? 0;
+                if (index == MockData.foods.length) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '--- MINUMAN ---',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.orange),
+                    ),
+                  );
+                }
+
+                final isFood = index < MockData.foods.length;
+                final item = isFood
+                    ? MockData.foods[index]
+                    : MockData.drinks[index - MockData.foods.length - 1];
+                final quantity = selectedItems[item.id] ?? 0;
 
                 return Card(
                   elevation: 0,
                   margin: const EdgeInsets.only(bottom: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey[300]!),
+                    side: BorderSide(color: Colors.grey.shade300),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -135,8 +187,8 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            food.imageUrl,
+                          child: Image.asset(
+                            item.imageUrl,
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
@@ -158,7 +210,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                food.name,
+                                item.name,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -166,7 +218,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Rp ${food.price.toStringAsFixed(0)}',
+                                'Rp ${item.price.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   color: Colors.orange[400],
                                   fontWeight: FontWeight.bold,
@@ -178,13 +230,14 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                         QuantitySelector(
                           quantity: quantity,
                           onChanged: (newQuantity) =>
-                              updateQuantity(food.id, newQuantity),
+                              updateQuantity(item.id, newQuantity),
                         ),
                       ],
                     ),
                   ),
                 );
               },
+              separatorBuilder: (_, __) => const Divider(height: 0),
             ),
           ),
         ],
@@ -234,7 +287,8 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                           horizontal: 24, vertical: 12),
                       backgroundColor: Colors.orange[400],
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       'Pesan Sekarang',
@@ -274,60 +328,17 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
   }
 }
 
-class QuantitySelector extends StatelessWidget {
-  final int quantity;
-  final Function(int) onChanged;
-
-  const QuantitySelector({
-    super.key,
-    required this.quantity,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.remove, size: 20),
-          onPressed: quantity > 0 ? () => onChanged(quantity - 1) : null,
-          style: IconButton.styleFrom(
-            backgroundColor:
-                quantity > 0 ? Colors.orange[100] : Colors.grey[200],
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            quantity.toString(),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.add, size: 20),
-          onPressed: () => onChanged(quantity + 1),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.orange[100],
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class PaymentSummarySheet extends StatelessWidget {
   final Map<String, dynamic>? reservationData;
   final Map<String, int> selectedItems;
+  final List<Map<String, dynamic>> itemsWithDetails;
   final double totalAmount;
 
   const PaymentSummarySheet({
     super.key,
     required this.reservationData,
     required this.selectedItems,
+    required this.itemsWithDetails,
     required this.totalAmount,
   });
 
@@ -356,19 +367,18 @@ class PaymentSummarySheet extends StatelessWidget {
             _buildSummaryRow('Waktu', reservationData!['waktu']),
             const Divider(),
           ],
-          ...selectedItems.entries.map((entry) {
-            final food = MockData.foods.firstWhere((f) => f.id == entry.key);
+          ...itemsWithDetails.map((item) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${food.name} (${entry.value}x)',
+                    '${item['name']} (${item['quantity']}x)',
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                   Text(
-                    'Rp ${(food.price * entry.value).toStringAsFixed(0)}',
+                    'Rp ${(item['price'] * item['quantity']).toStringAsFixed(0)}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -392,17 +402,11 @@ class PaymentSummarySheet extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PaymentScreen(
-                      // Not PaymentsScreen
                       reservationData: reservationData,
-                      selectedItems: selectedItems,
+                      selectedItems:
+                          itemsWithDetails, // Gunakan itemsWithDetails bukan selectedItems
                       totalAmount: totalAmount,
                     ),
-                  ),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pesanan berhasil diproses!'),
-                    backgroundColor: Colors.green,
                   ),
                 );
               },
@@ -453,5 +457,60 @@ class PaymentSummarySheet extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class QuantitySelector extends StatelessWidget {
+  final int quantity;
+  final Function(int) onChanged;
+  const QuantitySelector({
+    super.key,
+    required this.quantity,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.remove, size: 20),
+          onPressed: quantity > 0 ? () => onChanged(quantity - 1) : null,
+          style: IconButton.styleFrom(
+            backgroundColor:
+                quantity > 0 ? Colors.orange[100] : Colors.grey[200],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            quantity.toString(),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add, size: 20),
+          onPressed: () => onChanged(quantity + 1),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.orange[100],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+extension ListExtensions on List<FoodModel> {
+  FoodModel? firstWhereOrNull(bool Function(FoodModel) test) {
+    for (var item in this) {
+      if (test(item)) return item;
+    }
+    return null;
   }
 }

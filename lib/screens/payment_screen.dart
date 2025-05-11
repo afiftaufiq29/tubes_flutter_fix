@@ -2,11 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:tubes_flutter/screens/home_screen.dart';
+import 'package:tubes_flutter/screens/menu_screen_reservation.dart';
 import '../services/mock_data.dart';
 
 class PaymentScreen extends StatefulWidget {
   final Map<String, dynamic>? reservationData;
-  final Map<String, int> selectedItems;
+  final List<Map<String, dynamic>> selectedItems;
   final double totalAmount;
 
   const PaymentScreen({
@@ -101,17 +102,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ...widget.selectedItems.entries.map((entry) {
-                        final food =
-                            MockData.foods.firstWhere((f) => f.id == entry.key);
+                      ...widget.selectedItems.map((item) {
+                        final food = MockData.foods
+                            .firstWhereOrNull((f) => f.id == item['id']);
+                        final drink = food == null
+                            ? MockData.drinks
+                                .firstWhereOrNull((d) => d.id == item['id'])
+                            : null;
+                        final itemModel = food ?? drink;
+                        final quantity = item['quantity'];
+
+                        if (itemModel == null) return const SizedBox();
+
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('${food.name} (${entry.value}x)'),
+                              Text('${itemModel.name} (${quantity}x)'),
                               Text(
-                                  'Rp ${(food.price * entry.value).toStringAsFixed(0)}'),
+                                  'Rp ${(itemModel.price * quantity).toStringAsFixed(0)}'),
                             ],
                           ),
                         );

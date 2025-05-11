@@ -56,11 +56,11 @@ class _MenuScreenState extends State<MenuScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Menu Kami',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.orange,
+            color: Colors.orange[400],
             fontSize: 22,
           ),
         ),
@@ -83,7 +83,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     onPressed: () => setState(() => _showFoods = true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          _showFoods ? Colors.orange : Colors.grey[300],
+                          _showFoods ? Colors.orange[400] : Colors.grey[300],
                       foregroundColor: _showFoods ? Colors.white : Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -99,7 +99,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     onPressed: () => setState(() => _showFoods = false),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          !_showFoods ? Colors.orange : Colors.grey[300],
+                          !_showFoods ? Colors.orange[400] : Colors.grey[300],
                       foregroundColor:
                           !_showFoods ? Colors.white : Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -120,9 +120,9 @@ class _MenuScreenState extends State<MenuScreen> {
                 physics: const BouncingScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.9,
                 ),
                 itemCount:
                     _showFoods ? MockData.foods.length : MockData.drinks.length,

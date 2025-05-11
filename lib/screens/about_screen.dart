@@ -121,10 +121,10 @@ class _AboutScreenState extends State<AboutScreen> {
       backgroundColor: Colors.grey[50],
       appBar: _showAppBar
           ? AppBar(
-              title: const Text('Tentang Kami',
+              title: Text('Tentang Kami',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryColor,
+                    color: Colors.orange[400],
                   )),
               centerTitle: true,
               elevation: 0,
