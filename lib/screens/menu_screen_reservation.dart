@@ -3,6 +3,14 @@ import 'package:tubes_flutter/screens/payment_screen.dart';
 import '../services/mock_data.dart';
 import '../models/food_model.dart';
 
+// Helper function for Indonesian currency formatting
+String formatCurrency(double amount) {
+  return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]}.',
+      )}';
+}
+
 class MenuScreenReservation extends StatefulWidget {
   final Map<String, dynamic>? reservationData;
   final bool preorder;
@@ -21,7 +29,6 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
   double totalAmount = 0.0;
   bool showPaymentBar = false;
 
-  // Pindahkan deklarasi fungsi helper ke atas
   FoodModel? getItemById(String id) {
     return MockData.foods.firstWhereOrNull((f) => f.id == id) ??
         MockData.drinks.firstWhereOrNull((d) => d.id == id);
@@ -43,10 +50,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
           selectedItems.remove(foodId);
         }
 
-        // Reset total amount
         totalAmount = 0.0;
-
-        // Calculate total amount for both foods and drinks
         selectedItems.forEach((id, qty) {
           final item = getItemById(id);
           if (item != null) {
@@ -59,7 +63,6 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
     }
 
     void proceedToPayment() {
-      // Prepare list of selected items with details
       List<Map<String, dynamic>> itemsWithDetails = [];
 
       selectedItems.forEach((id, quantity) {
@@ -91,11 +94,11 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Menu Makanan & Minuman",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.orange[400],
           ),
         ),
         centerTitle: true,
@@ -218,7 +221,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Rp ${item.price.toStringAsFixed(0)}',
+                                formatCurrency(item.price),
                                 style: TextStyle(
                                   color: Colors.orange[400],
                                   fontWeight: FontWeight.bold,
@@ -264,7 +267,7 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Total: Rp ${totalAmount.toStringAsFixed(0)}',
+                          'Total: ${formatCurrency(totalAmount)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -345,90 +348,110 @@ class PaymentSummarySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Center(
-            child: Text(
-              'Ringkasan Pesanan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (reservationData != null) ...[
-            _buildSummaryRow('Nama', reservationData!['nama']),
-            _buildSummaryRow(
-                'Tanggal', reservationData!['tanggal'].split('T')[0]),
-            _buildSummaryRow('Waktu', reservationData!['waktu']),
-            const Divider(),
-          ],
-          ...itemsWithDetails.map((item) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${item['name']} (${item['quantity']}x)',
-                    style: TextStyle(color: Colors.grey[700]),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text(
+                  'Ringkasan Pesanan',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  Text(
-                    'Rp ${(item['price'] * item['quantity']).toStringAsFixed(0)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+                ),
               ),
-            );
-          }),
-          const Divider(),
-          _buildSummaryRow(
-            'Total Pembayaran',
-            'Rp ${totalAmount.toStringAsFixed(0)}',
-            isBold: true,
-            isOrange: true,
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PaymentScreen(
-                      reservationData: reservationData,
-                      selectedItems:
-                          itemsWithDetails, // Gunakan itemsWithDetails bukan selectedItems
-                      totalAmount: totalAmount,
+              const SizedBox(height: 16),
+              if (reservationData != null) ...[
+                _buildSummaryRow('Nama', reservationData!['nama']),
+                _buildSummaryRow(
+                    'Tanggal', reservationData!['tanggal'].split('T')[0]),
+                _buildSummaryRow('Waktu', reservationData!['waktu']),
+                const Divider(),
+              ],
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: itemsWithDetails.length,
+                  itemBuilder: (context, index) {
+                    final item = itemsWithDetails[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '${item['name']} (${item['quantity']}x)',
+                              style: TextStyle(color: Colors.grey[700]),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            formatCurrency(item['price'] * item['quantity']),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const Divider(),
+              _buildSummaryRow(
+                'Total Pembayaran',
+                formatCurrency(totalAmount),
+                isBold: true,
+                isOrange: true,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PaymentScreen(
+                          reservationData: reservationData,
+                          selectedItems: itemsWithDetails,
+                          totalAmount: totalAmount,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.orange[400],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.orange[400],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  child: const Text(
+                    'KONFIRMASI PEMBAYARAN',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              child: const Text(
-                'KONFIRMASI PEMBAYARAN',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }

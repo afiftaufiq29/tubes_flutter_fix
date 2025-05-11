@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_flutter/models/food_model.dart';
 import 'package:tubes_flutter/screens/about_screen.dart';
-import 'screens/delivery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/reservation_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/preorder_screen.dart';
 import 'screens/payment_screen.dart';
 import 'screens/login_screen.dart';
 import 'constants/app_colors.dart';
@@ -29,7 +27,6 @@ class MyApp extends StatelessWidget {
       theme: _buildTheme(),
       initialRoute: '/login',
       routes: _buildRoutes(),
-      onGenerateRoute: _onGenerateRoute,
       onUnknownRoute: _onUnknownRoute,
       debugShowCheckedModeBanner: false,
     );
@@ -75,7 +72,6 @@ class MyApp extends StatelessWidget {
       '/menu': (context) => const MenuScreen(),
       '/reservation': (context) => const ReservationScreen(),
       '/profile': (context) => const ProfileScreen(),
-      '/preorder': (context) => const PreorderScreen(),
       '/menu-reservation': (context) => const menu_resv.MenuScreenReservation(),
       '/payment': (context) {
         final args =
@@ -108,16 +104,6 @@ class MyApp extends StatelessWidget {
         }
       },
     };
-  }
-
-  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
-    if (settings.name == '/delivery') {
-      final FoodModel food = settings.arguments as FoodModel;
-      return MaterialPageRoute(
-        builder: (context) => DeliveryScreen(food: food),
-      );
-    }
-    return null;
   }
 
   Route<dynamic> _onUnknownRoute(RouteSettings settings) {
