@@ -1,5 +1,3 @@
-// lib/constants/app_colors.dart
-
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -25,7 +23,18 @@ class AppColors {
   static const Color errorColor = Color(0xFFDC3545); // Merah error
   static const Color warningColor = Color(0xFFFFC107); // Kuning peringatan
 
+  // Baru: Tambahkan properti 'secondary' dan 'cardBackground'
+  static const Color secondary =
+      Color(0xFFD2B48C); // Krem (sama dengan secondaryColor)
+  static const Color cardBackground =
+      Color(0xFFFAF0E6); // Linen (sama dengan cardBackgroundColor)
+
   static const Color textPrimary = Color(0xFF333333);
   static const Color textSecondary = Color(0xFF666666);
   static const Color surfaceColor = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF5F5F5); // Light gray background
+  static const Color primary = Color(0xFFE65100); // Orange primary color
+
+  static const Color textColorPrimary = Colors.black87;
+  static const Color textColorSecondary = Colors.grey;
 }

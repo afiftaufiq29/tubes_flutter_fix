@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_flutter/models/food_model.dart';
 import 'package:tubes_flutter/screens/about_screen.dart';
+import 'package:tubes_flutter/screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/reservation_screen.dart';
@@ -14,6 +15,10 @@ import 'package:tubes_flutter/screens/menu_screen_reservation.dart'
     as menu_resv;
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // HAPUS baris ini:
+  // FontAwesomeIcons.config = FontAwesomeConfig();
+
   runApp(const MyApp());
 }
 
@@ -67,6 +72,7 @@ class MyApp extends StatelessWidget {
     return {
       '/': (context) => const LoginScreen(),
       '/login': (context) => const LoginScreen(),
+      '/register': (context) => const RegisterScreen(),
       '/home': (context) => const HomeScreen(),
       '/about': (context) => const AboutScreen(),
       '/menu': (context) => const MenuScreen(),
@@ -125,3 +131,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+class DeliveryScreen {}

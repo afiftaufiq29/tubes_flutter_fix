@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 
 import '../models/food_model.dart';
 import '../models/reservation_model.dart';
-import '../models/delivery_model.dart';
 import './mock_data.dart';
 
 class ApiService {
@@ -38,15 +37,4 @@ class ApiService {
   }
 
   // Fungsi untuk menambahkan pesanan pengantaran
-  Future<void> addDelivery(DeliveryModel delivery) async {
-    try {
-      await _simulateNetworkDelay();
-      // Simulasi penyimpanan pengantaran (misalnya, hanya mencetak ke konsol)
-      if (kDebugMode) {
-        print("Pesanan pengantaran berhasil ditambahkan: ${delivery.toJson()}");
-      }
-    } catch (e) {
-      throw Exception('Gagal menambahkan pesanan pengantaran');
-    }
-  }
 }

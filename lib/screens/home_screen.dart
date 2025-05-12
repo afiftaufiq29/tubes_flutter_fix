@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../widgets/custom_bottom_navigation_bar.dart';
 import 'dart:ui';
+import '../services/mock_data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,67 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
   double _scrollPosition = 0;
   late GoogleMapController _mapController;
   final LatLng _restaurantLocation =
-      const LatLng(-6.966667, 107.633333); // Example coordinates for Bandung
+      const LatLng(-6.966667, 107.633333); // Koordinat Bandung sebagai contoh
   bool _mapExpanded = false;
   double _mapHeight = 150;
-
-  final List<Map<String, dynamic>> topMenus = [
-    // Foods
-    {
-      'title': 'Nasi Padang Komplit',
-      'image': 'assets/images/food_images/pempek.jpg',
-      'price': '45.000',
-      'rating': 4.8,
-      'category': 'food',
-      'description':
-          'Nasi Padang komplit dengan berbagai lauk pilihan seperti rendang, gulai, dan sambal balado.',
-    },
-    {
-      'title': 'Ayam Bakar Taliwang',
-      'image': 'assets/images/food_images/ayam_betutu.jpg',
-      'price': '55.000',
-      'rating': 4.9,
-      'category': 'food',
-      'description':
-          'Ayam bakar khas Lombok dengan bumbu pedas dan rempah yang khas.',
-    },
-    {
-      'title': 'Sate Ayam Madura',
-      'image': 'assets/images/food_images/sate.jpg',
-      'price': '35.000',
-      'rating': 4.7,
-      'category': 'food',
-      'description':
-          'Sate ayam dengan bumbu kacang khas Madura yang gurih dan lezat.',
-    },
-    // Drinks
-    {
-      'title': 'Es Cendol Segar',
-      'image': 'assets/images/drink_images/es_cendol.jpg',
-      'price': '18.000',
-      'rating': 4.7,
-      'category': 'drink',
-      'description':
-          'Minuman tradisional dengan cendol, santan, dan gula merah yang menyegarkan.',
-    },
-    {
-      'title': 'Es Teh Manis',
-      'image': 'assets/images/drink_images/es_teh.jpg',
-      'price': '12.000',
-      'rating': 4.5,
-      'category': 'drink',
-      'description': 'Es teh manis khas Indonesia dengan aroma teh yang harum.',
-    },
-    {
-      'title': 'Jus Alpukat',
-      'image': 'assets/images/drink_images/jus_alpukat.jpg',
-      'price': '25.000',
-      'rating': 4.8,
-      'category': 'drink',
-      'description':
-          'Jus alpukat kental dengan susu dan sirup coklat yang lezat.',
-    },
-  ];
 
   @override
   void initState() {
@@ -132,25 +76,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
-    if (mounted) {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
-
+    setState(() => _selectedIndex = index);
     switch (index) {
       case 0:
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-          (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         break;
       case 1:
-      case 2:
-      case 3:
         Navigator.pushNamed(context, '/menu').then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
+        });
+        break;
+      case 2:
+        Navigator.pushNamed(context, '/about').then((_) {
+          if (mounted) setState(() => _selectedIndex = 0);
+        });
+        break;
+      case 3:
+        Navigator.pushNamed(context, '/profile').then((_) {
           if (mounted) setState(() => _selectedIndex = 0);
         });
         break;
@@ -158,42 +100,80 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleSearch() {
-    if (_searchQuery.isNotEmpty) {
-      // Cari item yang cocok
-      final matchingItem = topMenus.firstWhere(
-        (menu) =>
-            menu['title']!.toLowerCase().contains(_searchQuery.toLowerCase()),
-        orElse: () => {},
-      );
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
 
-      if (matchingItem.isNotEmpty) {
-        // Scroll ke item yang cocok
-        final index = topMenus.indexOf(matchingItem);
-        final offset = (index * 120.0) + 400.0; // Perkiraan posisi scroll
-        _scrollController.animateTo(
-          offset,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
+    final allMenus = [...MockData.foods, ...MockData.drinks];
+    final matchingItems = allMenus
+        .where((menu) =>
+            menu.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
 
-        // Trigger rebuild
-        setState(() {});
-      } else {
-        // Tampilkan snackbar jika tidak ditemukan
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Tidak ditemukan menu dengan kata kunci "$_searchQuery"'),
-            duration: const Duration(seconds: 2),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            matchingItems.isNotEmpty
+                ? 'Ditemukan ${matchingItems.length} menu'
+                : 'Tidak ditemukan menu dengan kata kunci "$_searchQuery"',
           ),
-        );
-      }
-    }
+          duration: const Duration(seconds: 2),
+          backgroundColor:
+              matchingItems.isNotEmpty ? Colors.green : Colors.orange,
+        ),
+      );
+    });
+  }
+
+  Widget _buildSearchResults() {
+    final allMenus = [...MockData.foods, ...MockData.drinks];
+    final matchingItems = allMenus
+        .where((menu) =>
+            menu.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hasil Pencarian (${matchingItems.length})',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (matchingItems.isNotEmpty)
+          ...matchingItems.map((menu) => _buildMenuItem(
+                menu.name,
+                menu.imageUrl,
+                menu.price.toString(),
+                4.5,
+                menu.description,
+                true,
+              )),
+        if (matchingItems.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Text(
+                'Tidak ditemukan menu dengan kata kunci "$_searchQuery"',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ),
+          )
+      ],
+    );
   }
 
   Future<void> _openGoogleMaps() async {
     final url =
-        'https://www.google.com/maps/search/?api=1&query=${_restaurantLocation.latitude},${_restaurantLocation.longitude}';
+        'https://www.google.com/maps/search/?api=1&query= ${_restaurantLocation.latitude},${_restaurantLocation.longitude}';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     } else {
@@ -214,11 +194,13 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey[50],
       appBar: _showAppBar
           ? AppBar(
-              title: Text('Masakan Nusantara',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[400],
-                  )),
+              title: Text(
+                'Masakan Nusantara',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[400],
+                ),
+              ),
               centerTitle: true,
               elevation: 0,
               backgroundColor: Colors.transparent,
@@ -237,14 +219,13 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: SingleChildScrollView(
             controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
+            physics: const ClampingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-
                   // Banner Slider
                   SizedBox(
                     height: 160,
@@ -279,14 +260,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   // Search Bar with search action
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Cari menu favorit...',
+                      hintText: 'Cari Menu...',
                       prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
@@ -310,9 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() => _searchQuery = value.toLowerCase()),
                     onSubmitted: (_) => _handleSearch(),
                   ),
-
                   const SizedBox(height: 20),
-
                   // Interactive Map Card
                   Card(
                     elevation: 0,
@@ -459,9 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   // Reservation Button
                   SizedBox(
                     width: double.infinity,
@@ -486,76 +461,50 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Search results or all menus
+                  // Search results or default menu
                   if (_searchQuery.isNotEmpty)
                     _buildSearchResults()
                   else
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Food Menu Section
-                        if (topMenus.any((menu) => menu['category'] == 'food'))
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Makanan Populer',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ...topMenus
-                                  .where((menu) => menu['category'] == 'food')
-                                  .map((menu) => _buildMenuItem(
-                                        menu['title']!,
-                                        menu['image']!,
-                                        menu['price']!,
-                                        menu['rating']!,
-                                        menu['description']!,
-                                        false,
-                                      ))
-                                  .toList(),
-                            ],
+                        Text(
+                          'Makanan Populer',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
                           ),
-
+                        ),
+                        const SizedBox(height: 12),
+                        ...MockData.foods.take(3).map((food) => _buildMenuItem(
+                            food.name,
+                            food.imageUrl,
+                            food.price.toString(),
+                            4.5,
+                            food.description,
+                            false)),
                         const SizedBox(height: 16),
-
-                        // Drink Menu Section
-                        if (topMenus.any((menu) => menu['category'] == 'drink'))
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Minuman Populer',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ...topMenus
-                                  .where((menu) => menu['category'] == 'drink')
-                                  .map((menu) => _buildMenuItem(
-                                        menu['title']!,
-                                        menu['image']!,
-                                        menu['price']!,
-                                        menu['rating']!,
-                                        menu['description']!,
-                                        false,
-                                      ))
-                                  .toList(),
-                            ],
+                        Text(
+                          'Minuman Populer',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...MockData.drinks.take(3).map((drink) =>
+                            _buildMenuItem(
+                                drink.name,
+                                drink.imageUrl,
+                                drink.price.toString(),
+                                4.5,
+                                drink.description,
+                                false)),
                       ],
                     ),
-
                   const SizedBox(height: 20),
                 ],
               ),
@@ -567,52 +516,6 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
-    );
-  }
-
-  Widget _buildSearchResults() {
-    final matchingItems = topMenus
-        .where((menu) => menu['title']!.toLowerCase().contains(_searchQuery))
-        .toList();
-
-    if (matchingItems.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Text(
-            'Tidak ditemukan menu dengan kata kunci "$_searchQuery"',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hasil Pencarian',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...matchingItems
-            .map((menu) => _buildMenuItem(
-                  menu['title']!,
-                  menu['image']!,
-                  menu['price']!,
-                  menu['rating']!,
-                  menu['description']!,
-                  true,
-                ))
-            .toList(),
-      ],
     );
   }
 
@@ -629,12 +532,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: () {
           _showFoodDetailDialog(title, imagePath, price, rating, description);
         },
-        highlightColor: Colors.transparent,
-        splashColor: Colors.orange.withOpacity(0.1),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -648,6 +548,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
+                      width: 80,
+                      height: 80,
                       color: Colors.grey[200],
                       child: const Center(
                         child: Icon(Icons.fastfood, size: 40),

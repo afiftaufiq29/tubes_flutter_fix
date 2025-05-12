@@ -1,6 +1,5 @@
 import '../models/food_model.dart';
 import '../models/reservation_model.dart';
-import '../models/delivery_model.dart';
 
 class MockData {
   // Data dummy untuk makanan
@@ -160,17 +159,5 @@ class MockData {
         numberOfGuests: 4,
         phoneNumber: '08123456789',
         specialRequest: 'Tolong tempatkan di area non-smoking.',
-      );
-
-  // Data dummy untuk pengantaran
-  static DeliveryModel get sampleDelivery => DeliveryModel(
-        id: '456',
-        customerName: 'Jane Doe',
-        deliveryAddress: 'Jl. Sudirman No. 123',
-        phoneNumber: '08123456789',
-        orderedItems: foods,
-        totalPrice: 110000,
-        orderDate: DateTime.now(),
-        deliveryInstructions: 'Tinggalkan di depan pintu.',
       );
 }
