@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import '../widgets/custom_bottom_navigation_bar.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import 'dart:convert';
+import '../widgets/custom_bottom_navigation_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,7 +13,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   int _selectedIndex = 3;
   UserModel? currentUser;
   File? _profileImage;
@@ -21,16 +23,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   bool _isEditing = false;
-  bool _notificationsEnabled = true;
   final ScrollController _scrollController = ScrollController();
   bool _showAppBar = true;
   double _scrollPosition = 0;
+  String memberSince = '';
+
+  // Animation controllers
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _rotateController;
+  late AnimationController _cardTapController;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controllers
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _cardTapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    // Start animations
+    _fadeController.forward();
+    _slideController.forward();
+    _rotateController.repeat();
+
     _loadUserData();
+    _loadProfileImage();
     _scrollController.addListener(_scrollListener);
+
+    // Set member since time
+    final now = DateTime.now();
+    memberSince =
+        '${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _rotateController.dispose();
+    _cardTapController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _scrollListener() {
@@ -47,7 +100,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _scrollPosition = currentScroll;
   }
 
-  // In your ProfileScreen's _loadUserData method:
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString('user_data');
@@ -56,68 +108,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (userData != null) {
         final Map<String, dynamic> userMap = json.decode(userData);
         currentUser = UserModel(
-          name: userMap['name'] ?? 'User Name',
+          name: userMap['name'] ?? 'Nama Pengguna',
           email: userMap['email'] ?? '',
           phone: userMap['phone'] ?? '',
-          joinDate: userMap['joinDate'] ?? 'Jan 2023',
+          joinDate: userMap['joinDate'] ?? memberSince,
           password: userMap['password'] ?? '',
         );
       } else {
         currentUser = dummyUsers[0];
       }
-      _nameController.text = currentUser?.name ?? 'User Name';
+      _nameController.text = currentUser?.name ?? 'Nama Pengguna';
       _emailController.text = currentUser?.email ?? '';
     });
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profile_image_path');
+
+    if (imagePath != null && File(imagePath).existsSync()) {
+      setState(() {
+        _profileImagePath = imagePath;
+        _profileImage = File(imagePath);
+      });
+    }
   }
 
   Future<void> _saveUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final Map<String, dynamic> userMap = currentUser!.toJson();
     await prefs.setString('user_data', json.encode(userMap));
-    await prefs.setBool('notifications_enabled', _notificationsEnabled);
 
     if (_profileImagePath != null) {
       await prefs.setString('profile_image_path', _profileImagePath!);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Profil berhasil disimpan'),
+      const SnackBar(
+        content: Text('Profil berhasil disimpan'),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        backgroundColor: Colors.orange[400],
+        backgroundColor: Colors.green,
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({bool fromCamera = false}) async {
     if (!_isEditing) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Aktifkan mode edit untuk mengubah foto profil'),
+        const SnackBar(
+          content: Text('Aktifkan mode edit untuk mengubah foto profil'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.orange[400],
+          backgroundColor: Colors.orange,
         ),
       );
       return;
     }
 
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await _picker.pickImage(
+      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      preferredCameraDevice: CameraDevice.front,
+      imageQuality: 85,
+    );
+
     if (image != null) {
+      // Save to app directory for persistence
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String newPath =
+          '${appDir.path}/profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final File newImage = await File(image.path).copy(newPath);
+
+      // Save the path to shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_image_path', newPath);
+
       setState(() {
-        _profileImage = File(image.path);
-        _profileImagePath = image.path;
+        _profileImage = newImage;
+        _profileImagePath = newPath;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(fromCamera
+              ? 'Foto profil berhasil diambil'
+              : 'Foto profil berhasil dipilih'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -136,7 +213,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         name: _nameController.text,
         email: _emailController.text,
         password: currentUser?.password ?? '',
-        joinDate: currentUser?.joinDate ?? 'Jan 2023',
+        phone: currentUser?.phone ?? '',
+        joinDate: memberSince,
       );
       _saveUserData();
     });
@@ -144,60 +222,223 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-    setState(() => _selectedIndex = index);
 
-    switch (index) {
-      case 0:
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-        break;
-      case 1:
-        Navigator.pushNamed(context, '/menu').then((_) {
-          if (mounted) setState(() => _selectedIndex = 0);
-        });
-        break;
-      case 2:
-        Navigator.pushNamed(context, '/about').then((_) {
-          if (mounted) setState(() => _selectedIndex = 0);
-        });
-        break;
-      case 3:
-        // Already on profile screen
-        break;
-    }
+    // Animate before navigation
+    _slideController.reverse().then((_) {
+      if (mounted) {
+        setState(() => _selectedIndex = index);
+        switch (index) {
+          case 0:
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/home', (route) => false);
+            break;
+          case 1:
+            Navigator.pushNamed(context, '/menu').then((_) {
+              if (mounted) setState(() => _selectedIndex = 0);
+            });
+            break;
+          case 2:
+            Navigator.pushNamed(context, '/about').then((_) {
+              if (mounted) setState(() => _selectedIndex = 0);
+            });
+            break;
+          case 3:
+            // Already on profile screen
+            _slideController.forward();
+            break;
+        }
+      }
+    });
   }
 
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun?'),
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tidak'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
-              Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/login', (route) => false);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Berhasil keluar dari akun'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.orange[400],
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Konfirmasi',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
                 ),
-              );
-            },
-            child: const Text('Ya'),
+              ),
+              const SizedBox(height: 16),
+              const Text('Apakah Anda yakin ingin keluar dari akun?'),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        side: const BorderSide(color: Colors.orange),
+                      ),
+                      child: const Text(
+                        'Tidak',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        if (mounted) {
+                          Navigator.pop(context);
+                          Navigator.pushNamedAndRemoveUntil(
+                              context, '/login', (route) => false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Berhasil keluar dari akun'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Ya'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Pilih Sumber Foto',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                  title: const Text('Ambil Foto'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(fromCamera: true);
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading:
+                      const Icon(Icons.photo_library, color: Colors.orange),
+                  title: const Text('Pilih dari Galeri'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(fromCamera: false);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.orange)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileImage() {
+    return GestureDetector(
+      onTap: _isEditing ? _showImageSourceDialog : null,
+      child: AnimatedBuilder(
+        animation: _cardTapController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 1.0 - (_cardTapController.value * 0.05),
+            child: child,
+          );
+        },
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.orange,
+                  width: 2,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey[200],
+                backgroundImage:
+                    _profileImage != null ? FileImage(_profileImage!) : null,
+                child: _profileImage == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Colors.grey,
+                      )
+                    : null,
+              ),
+            ),
+            if (_isEditing)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(Icons.camera_alt,
+                      size: 20, color: Colors.white),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -208,257 +449,204 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.grey[50],
       appBar: _showAppBar
           ? AppBar(
-              title: Text('Profil Saya',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[400],
-                  )),
+              title: AnimatedBuilder(
+                animation: _fadeController,
+                builder: (context, child) => FadeTransition(
+                  opacity: _fadeController,
+                  child: Transform.translate(
+                    offset: Offset(0, (1 - _fadeController.value) * 20),
+                    child: const Text(
+                      'Profil Saya',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               centerTitle: true,
               elevation: 0,
               backgroundColor: Colors.transparent,
               automaticallyImplyLeading: false,
               actions: [
-                IconButton(
-                  icon: Icon(_isEditing ? Icons.check : Icons.edit,
-                      color: Colors.orange[400]),
-                  onPressed: _toggleEditMode,
+                AnimatedBuilder(
+                  animation: _rotateController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _rotateController.value * 2 * 3.1416,
+                      child: IconButton(
+                        icon: Icon(
+                          _isEditing ? Icons.check : Icons.edit,
+                          color: Colors.orange,
+                        ),
+                        onPressed: _toggleEditMode,
+                      ),
+                    );
+                  },
                 ),
               ],
             )
           : null,
       body: SafeArea(
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollUpdateNotification) {
-              if (notification.metrics.axis == Axis.vertical) {
-                return true;
-              }
-            }
-            return false;
-          },
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            physics: const ClampingScrollPhysics(),
-            child: Column(
-              children: [
-                // Modern Profile Header with Gradient
-                Container(
-                  padding: const EdgeInsets.only(top: 24, bottom: 32),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.orange[400]!.withOpacity(0.1),
-                        Colors.orange[50]!,
-                      ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      GestureDetector(
-                        onTap: _isEditing ? _pickImage : null,
-                        child: Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.orange[400]!,
-                                  width: 2,
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundColor: Colors.grey[200],
-                                backgroundImage: _profileImage != null
-                                    ? FileImage(_profileImage!)
-                                    : null,
-                                child: _profileImage == null
-                                    ? Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Colors.grey[600],
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            if (_isEditing)
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange[400],
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const Icon(Icons.camera_alt,
-                                      size: 20, color: Colors.white),
-                                ),
-                              ),
+        child: AnimatedBuilder(
+          animation: _slideController,
+          builder: (context, child) => SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.2),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: _slideController,
+              curve: Curves.easeOutQuint,
+            )),
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification) {
+                  if (notification.metrics.axis == Axis.vertical) {
+                    return true;
+                  }
+                }
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  children: [
+                    // Header Profil dengan Gradient
+                    Container(
+                      padding: const EdgeInsets.only(top: 24, bottom: 32),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.orange.withOpacity(0.1),
+                            Colors.orange[50]!,
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 80),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[400],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: _isEditing
-                            ? TextField(
-                                controller: _nameController,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                  hintStyle: TextStyle(color: Colors.white70),
-                                ),
-                              )
-                            : Text(
-                                currentUser?.name ?? 'User Name',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Member since ${currentUser?.joinDate ?? DateTime.now().year.toString()}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Modern Info Cards
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      _buildModernInfoCard(
-                        icon: Icons.person_outline,
-                        title: "Informasi Pribadi",
-                        items: [
-                          _buildInfoItem(
-                              'Nama Lengkap', currentUser?.name ?? 'User Name'),
-                          _buildInfoItem('Email', currentUser?.email ?? ''),
-                          _buildInfoItem(
-                              'Bergabung', currentUser?.joinDate ?? 'Jan 2023'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildModernInfoCard(
-                        icon: Icons.security_outlined,
-                        title: "Keamanan Akun",
-                        items: [
-                          _buildInfoItem('Password', '••••••••'),
-                          if (_isEditing)
-                            _buildActionItem(
-                              'Ubah Password',
-                              Icons.arrow_forward_ios,
-                              action: _showChangePasswordDialog,
+                      child: Column(
+                        children: [
+                          _buildProfileImage(),
+                          const SizedBox(height: 80),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(20),
                             ),
+                            child: _isEditing
+                                ? TextField(
+                                    controller: _nameController,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintStyle:
+                                          TextStyle(color: Colors.white70),
+                                    ),
+                                  )
+                                : Text(
+                                    currentUser?.name ?? 'Nama Pengguna',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Member sejak $memberSince',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-                // Settings Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      _buildSettingTile(
-                        icon: Icons.notifications_active_outlined,
-                        title: "Notifikasi",
-                        subtitle: "Aktifkan notifikasi penting",
-                        trailing: Switch(
-                          value: _notificationsEnabled,
-                          onChanged: _isEditing
-                              ? (value) =>
-                                  setState(() => _notificationsEnabled = value)
-                              : null,
-                          activeColor: Colors.orange[400],
-                        ),
+                    // Kartu Informasi
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          _buildModernInfoCard(
+                            icon: Icons.person_outline,
+                            title: "Informasi Pribadi",
+                            items: [
+                              _buildInfoItem('Nama Lengkap',
+                                  currentUser?.name ?? 'Nama Pengguna'),
+                              _buildInfoItem('Email', currentUser?.email ?? ''),
+                              _buildInfoItem('Bergabung', memberSince),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildModernInfoCard(
+                            icon: Icons.security_outlined,
+                            title: "Keamanan Akun",
+                            items: [
+                              _buildInfoItem('Password', '••••••••'),
+                              if (_isEditing)
+                                _buildActionItem(
+                                  'Ubah Password',
+                                  Icons.arrow_forward_ios,
+                                  action: _showChangePasswordDialog,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      _buildSettingTile(
-                        icon: Icons.language_outlined,
-                        title: "Bahasa",
-                        subtitle: "Bahasa Indonesia",
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _isEditing ? _showLanguageDialog : null,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildSettingTile(
-                        icon: Icons.help_outline,
-                        title: "Bantuan & Dukungan",
-                        subtitle: "Pusat bantuan dan FAQ",
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _isEditing ? _showHelpDialog : null,
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                // Logout Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[50],
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.red[200]!),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: _handleLogout,
-                      child: Text(
-                        'Keluar',
-                        style: TextStyle(
-                          color: Colors.red[600],
-                          fontWeight: FontWeight.bold,
+                    // Tombol Logout
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[50],
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.red[200]!),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: _handleLogout,
+                          child: Text(
+                            'Keluar',
+                            style: TextStyle(
+                              color: Colors.red[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 20),
-              ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -488,7 +676,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: Colors.orange[400], size: 22),
+                Icon(icon, color: Colors.orange, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   title,
@@ -574,59 +762,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSettingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Widget trailing,
-    Function()? onTap,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[300]!),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.orange[400], size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[800],
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              trailing,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showChangePasswordDialog() {
     final TextEditingController _oldPasswordController =
         TextEditingController();
@@ -651,7 +786,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.orange[400],
+                  color: Colors.orange,
                 ),
               ),
               const SizedBox(height: 20),
@@ -699,11 +834,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        side: BorderSide(color: Colors.orange[400]!),
+                        side: const BorderSide(color: Colors.orange),
                       ),
                       child: Text(
                         'Batal',
-                        style: TextStyle(color: Colors.orange[400]),
+                        style: TextStyle(color: Colors.orange),
                       ),
                     ),
                   ),
@@ -714,10 +849,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (_oldPasswordController.text !=
                             currentUser?.password) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Password lama tidak sesuai'),
+                            const SnackBar(
+                              content: Text('Password lama tidak sesuai'),
                               behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.orange[400],
+                              backgroundColor: Colors.orange,
                             ),
                           );
                           return;
@@ -726,11 +861,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (_newPasswordController.text !=
                             _confirmPasswordController.text) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                  'Konfirmasi password tidak sesuai'),
+                            const SnackBar(
+                              content: Text('Konfirmasi password tidak sesuai'),
                               behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.orange[400],
+                              backgroundColor: Colors.orange,
                             ),
                           );
                           return;
@@ -741,21 +875,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             name: currentUser!.name,
                             email: currentUser!.email,
                             password: _newPasswordController.text,
-                            joinDate: currentUser!.joinDate,
+                            phone: currentUser!.phone,
+                            joinDate: memberSince,
                           );
                         });
 
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Password berhasil diubah'),
+                          const SnackBar(
+                            content: Text('Password berhasil diubah'),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: Colors.orange[400],
+                            backgroundColor: Colors.orange,
                           ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[400],
+                        backgroundColor: Colors.orange,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -765,119 +900,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLanguageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Pilih Bahasa',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange[400],
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildLanguageOption('Bahasa Indonesia'),
-              const Divider(height: 16),
-              _buildLanguageOption('English'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption(String language) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Bahasa diubah ke $language'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.orange[400],
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Icon(Icons.language, color: Colors.orange[400]),
-            const SizedBox(width: 12),
-            Text(
-              language,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHelpDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bantuan & Dukungan',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange[400],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Pusat Bantuan',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('Hubungi kami di help@example.com'),
-              const SizedBox(height: 16),
-              const Text('FAQ', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text('Kunjungi halaman FAQ kami untuk pertanyaan umum'),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[400],
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Tutup'),
-                ),
               ),
             ],
           ),
@@ -914,7 +936,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      name: json['name'] ?? 'User Name',
+      name: json['name'] ?? 'Nama Pengguna',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       joinDate: json['joinDate'] ?? 'Jan 2023',
