@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tubes_flutter/screens/home_screen.dart';
-import 'package:tubes_flutter/screens/register_screen.dart';
-import 'package:lottie/lottie.dart'; // Add this import
+import 'package:lottie/lottie.dart';
+import 'package:tubes_flutter/utils/validation_helper.dart';
+import 'home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,15 +16,16 @@ class LoginScreen extends StatefulWidget {
 
 class LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _showLoginForm = false;
   bool _showTitle = false;
   bool _exitToLeft = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
-    // Pastikan semua animasi dimulai dengan benar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) setState(() => _showTitle = true);
@@ -34,33 +36,45 @@ class LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  String _standardizePhone(String phone) {
+    String cleanNumber = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanNumber.startsWith("0")) {
+      return "62${cleanNumber.substring(1)}";
+    } else if (!cleanNumber.startsWith("62")) {
+      return "62$cleanNumber";
+    }
+    return cleanNumber;
+  }
+
   Future<void> _login(BuildContext context) async {
     setState(() => _isLoading = true);
 
-    final phoneNumber = _phoneNumberController.text.trim();
-    if (phoneNumber.isEmpty) {
+    final standardizedPhone = _standardizePhone(_phoneNumberController.text);
+    final password = _passwordController.text.trim();
+
+    if (standardizedPhone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan nomor HP')),
+        const SnackBar(content: Text('Isi nomor HP dan password')),
       );
       setState(() => _isLoading = false);
       return;
     }
 
-    // Simulate API call delay
-    await Future.delayed(const Duration(seconds: 2));
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString('user_data');
 
-    if (phoneNumber == '+628123456789') {
-      // Save user data
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          'user_data',
-          json.encode({
-            'name': 'John Doe',
-            'email': 'user@example.com',
-            'phone': phoneNumber,
-            'joinDate': DateTime.now().toString(),
-          }));
+    if (userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Akun belum terdaftar')),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
 
+    final Map<String, dynamic> userMap = json.decode(userData);
+
+    if (userMap['phone'] == standardizedPhone &&
+        userMap['password'] == password) {
       setState(() => _exitToLeft = true);
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -90,7 +104,7 @@ class LoginScreenState extends State<LoginScreen> {
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nomor HP tidak terdaftar')),
+        const SnackBar(content: Text('Nomor HP atau password salah')),
       );
       setState(() => _isLoading = false);
     }
@@ -102,33 +116,19 @@ class LoginScreenState extends State<LoginScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background color fallback jika gambar tidak ada
-          Container(color: Colors.orange[100]),
-
-          // Background image dengan error handling yang lebih baik
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/background_images/bg_login.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.orange[200],
-                  child: Center(
-                    child: Icon(
-                      Icons.image_not_supported,
-                      size: 50,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                );
-              },
+          // Background dengan gambar dan blur effect
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image:
+                    AssetImage('assets/images/background_images/bg_login.jpg'),
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-
-          // Blur effect
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.3)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(color: Colors.black.withOpacity(0.3)),
+            ),
           ),
 
           // Konten utama
@@ -151,7 +151,7 @@ class LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         'MASAKAN NUSANTARA',
                         style: TextStyle(
-                          fontSize: 28, // Diperbesar
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           letterSpacing: 1.5,
@@ -160,7 +160,7 @@ class LoginScreenState extends State<LoginScreen> {
                               blurRadius: 10,
                               color: Colors.black45,
                               offset: Offset(2, 2),
-                            ),
+                            )
                           ],
                         ),
                       ),
@@ -196,7 +196,7 @@ class LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // Loading overlay with Lottie animation
+          // Loading overlay
           if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
@@ -208,13 +208,13 @@ class LoginScreenState extends State<LoginScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Container(
         key: const ValueKey('loginForm'),
-        padding: const EdgeInsets.all(24.0), // Padding diperbesar
+        padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9), // Opacity ditingkatkan
-          borderRadius: BorderRadius.circular(20), // Border radius diperbesar
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25), // Shadow lebih terlihat
+              color: Colors.black.withOpacity(0.25),
               blurRadius: 25,
               spreadRadius: 5,
               offset: const Offset(0, 5),
@@ -224,16 +224,15 @@ class LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            TextFormField(
               controller: _phoneNumberController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Nomor HP',
-                hintText: 'Contoh: +628123456789',
+                hintText: 'Contoh: 08123456789',
                 prefixIcon: const Icon(Icons.phone, color: Colors.orange),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[400]!),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -244,6 +243,37 @@ class LoginScreenState extends State<LoginScreen> {
                   borderSide: BorderSide(color: Colors.orange[400]!, width: 2),
                 ),
               ),
+              validator: ValidationHelper.validatePhoneNumber,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock, color: Colors.orange),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.orange,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[400]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.orange[400]!, width: 2),
+                ),
+              ),
+              validator: ValidationHelper.validatePassword,
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -252,11 +282,11 @@ class LoginScreenState extends State<LoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : () => _login(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[600], // Warna lebih cerah
+                  backgroundColor: Colors.orange[600],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 8, // Elevation ditingkatkan
+                  elevation: 8,
                   shadowColor: Colors.orange.withOpacity(0.6),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -273,12 +303,13 @@ class LoginScreenState extends State<LoginScreen> {
             TextButton(
               onPressed: _isLoading
                   ? null
-                  : () => Navigator.push(
+                  : () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
-                        ),
-                      ),
+                            builder: (context) => const RegisterScreen()),
+                      );
+                    },
               child: RichText(
                 text: TextSpan(
                   text: 'Belum punya akun? ',
@@ -304,15 +335,10 @@ class LoginScreenState extends State<LoginScreen> {
   Widget _buildLoadingOverlay() {
     return Stack(
       children: [
-        // Blur effect behind the loading
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: Container(
-            color: Colors.black.withOpacity(0.3),
-          ),
+          child: Container(color: Colors.black.withOpacity(0.3)),
         ),
-
-        // Center the loading animation
         Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -321,11 +347,10 @@ class LoginScreenState extends State<LoginScreen> {
                 'assets/animations/loading_hand.json',
                 width: 200,
                 height: 200,
-                fit: BoxFit.contain,
               ),
               const SizedBox(height: 16),
               const Text(
-                'Kalem aa',
+                'Sedang memproses...',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -349,6 +374,7 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _phoneNumberController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 }

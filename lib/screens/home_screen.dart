@@ -452,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         elevation: 0,
                       ),
                       child: const Text(
-                        'RESERVASI MEJA',
+                        'RESERVASI MENU',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

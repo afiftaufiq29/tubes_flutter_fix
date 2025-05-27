@@ -298,15 +298,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: ElevatedButton(
                       onPressed: () async {
                         final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear();
+                        // Hapus hanya data sesi (jika ada)
+                        // await prefs.remove('session_token');
+                        // atau tidak hapus sama sekali
+
                         if (mounted) {
-                          Navigator.pop(context);
                           Navigator.pushNamedAndRemoveUntil(
                               context, '/login', (route) => false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Berhasil keluar dari akun'),
-                              behavior: SnackBarBehavior.floating,
+                              content: Text('Berhasil keluar'),
                               backgroundColor: Colors.orange,
                             ),
                           );

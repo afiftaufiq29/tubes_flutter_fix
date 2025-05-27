@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../constants/app_colors.dart';
 import '../widgets/custom_bottom_navigation_bar.dart';
 
@@ -132,7 +133,7 @@ class _AboutScreenState extends State<AboutScreen>
 
   Future<void> _launchMaps() async {
     const url =
-        'https://www.google.com/maps/search/?api=1&query=Rasa+Nusantara+Bandung';
+        'https://www.google.com/maps/search/?api=1&query=Rasa+Nusantara+Bandung ';
     if (await canLaunch(url)) {
       await launch(url);
     } else {
@@ -142,13 +143,11 @@ class _AboutScreenState extends State<AboutScreen>
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
     if (mounted) {
       setState(() {
         _selectedIndex = index;
       });
     }
-
     switch (index) {
       case 0:
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
@@ -274,7 +273,6 @@ class _AboutScreenState extends State<AboutScreen>
                               );
                             },
                           ),
-
                           // Gradient Overlay
                           Positioned.fill(
                             child: DecoratedBox(
@@ -292,7 +290,6 @@ class _AboutScreenState extends State<AboutScreen>
                               ),
                             ),
                           ),
-
                           // Title Text with Animation
                           Positioned(
                             bottom: 40,
@@ -367,7 +364,6 @@ class _AboutScreenState extends State<AboutScreen>
                               ),
                             ),
                           ),
-
                           // Page Indicators with Animation
                           Positioned(
                             bottom: 20,
@@ -400,7 +396,6 @@ class _AboutScreenState extends State<AboutScreen>
                         ],
                       ),
                     ),
-
                     // Main Content
                     FadeTransition(
                       opacity: _fadeAnimation,
@@ -412,7 +407,6 @@ class _AboutScreenState extends State<AboutScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 30),
-
                               // Welcome Section
                               SlideTransition(
                                 position: _slideAnimation,
@@ -431,6 +425,7 @@ class _AboutScreenState extends State<AboutScreen>
                                   title: 'Sejarah Kami',
                                   content:
                                       'Rasa Nusantara didirikan pada tahun 2010 oleh Chef Andika Wibawa. Berawal dari warung kecil di Bandung, kini kami telah berkembang menjadi restoran dengan 5 cabang di Jawa Barat.',
+                                  iconColor: Colors.green,
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -489,6 +484,7 @@ class _AboutScreenState extends State<AboutScreen>
                                       'Jl. Terusan Buah Batu No.5, Batununggal, Kec. Bandung Kidul, Kota Bandung, Jawa Barat 40266\n\nBuka setiap hari:\n10.00 - 22.00 WIB',
                                   buttonText: 'Petunjuk Arah',
                                   onButtonPressed: _launchMaps,
+                                  iconColor: Colors.green,
                                 ),
                               ),
                               const SizedBox(height: 40),
@@ -551,6 +547,7 @@ class _AboutScreenState extends State<AboutScreen>
     required String content,
     String? buttonText,
     VoidCallback? onButtonPressed,
+    Color iconColor = Colors.orange,
   }) {
     return Card(
       elevation: 0,
@@ -570,10 +567,10 @@ class _AboutScreenState extends State<AboutScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.orange[400],
+                    color: iconColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: Colors.orange[400]),
+                  child: Icon(icon, color: iconColor),
                 ),
                 const SizedBox(width: 12),
                 Text(

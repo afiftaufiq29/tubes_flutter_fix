@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_flutter/models/food_model.dart';
+
+// Screens
+import 'package:tubes_flutter/screens/home_screen.dart';
 import 'package:tubes_flutter/screens/about_screen.dart';
 import 'package:tubes_flutter/screens/register_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/menu_screen.dart';
-import 'screens/reservation_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/payment_screen.dart';
-import 'screens/login_screen.dart';
-import 'constants/app_colors.dart';
-import 'constants/app_styles.dart';
-import 'widgets/food_card.dart';
+import 'package:tubes_flutter/screens/login_screen.dart';
+import 'package:tubes_flutter/screens/menu_screen.dart';
+import 'package:tubes_flutter/screens/reservation_screen.dart';
+import 'package:tubes_flutter/screens/profile_screen.dart';
+import 'package:tubes_flutter/screens/payment_screen.dart';
 import 'package:tubes_flutter/screens/menu_screen_reservation.dart'
     as menu_resv;
 
+// Models & Widgets
+import 'package:tubes_flutter/models/food_model.dart';
+import 'package:tubes_flutter/widgets/food_card.dart';
+
+// Constants
+import 'package:tubes_flutter/constants/app_colors.dart';
+import 'package:tubes_flutter/constants/app_styles.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // HAPUS baris ini:
-  // FontAwesomeIcons.config = FontAwesomeConfig();
-
   runApp(const MyApp());
 }
 
@@ -70,7 +73,6 @@ class MyApp extends StatelessWidget {
 
   Map<String, WidgetBuilder> _buildRoutes() {
     return {
-      '/': (context) => const LoginScreen(),
       '/login': (context) => const LoginScreen(),
       '/register': (context) => const RegisterScreen(),
       '/home': (context) => const HomeScreen(),
@@ -101,7 +103,13 @@ class MyApp extends StatelessWidget {
       '/food-cart': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         if (args is FoodModel) {
-          return FoodCard(food: args);
+          return Scaffold(
+            appBar: AppBar(title: Text(args.name)),
+            body: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: FoodCard(food: args),
+            ),
+          );
         } else {
           return Scaffold(
             appBar: AppBar(title: const Text('Error')),
@@ -131,5 +139,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-class DeliveryScreen {}

@@ -9,7 +9,7 @@ class ReservationScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Reservasi Meja',
+        title: const Text('Reservasi Menu',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color:
@@ -97,6 +97,8 @@ class ReservationFormState extends State<ReservationForm> {
     }
   }
 
+  // Di dalam class ReservationFormState
+
   void _processReservation() {
     setState(() => _isSubmitting = true);
 
@@ -113,34 +115,23 @@ class ReservationFormState extends State<ReservationForm> {
 
       setState(() => _isSubmitting = false);
 
-      if (_preorderMenu) {
-        Navigator.pushNamed(
-          context,
-          '/menu-reservation', // ← ini ganti sesuai rute yang kamu daftarkan
-          arguments: {
-            'reservationData': reservationData,
-            'preorder': true,
-          },
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ Reservasi meja berhasil!'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            backgroundColor: Colors.green[400],
-          ),
-        );
+      // Hapus kondisi if(_preorderMenu) agar selalu navigasi
+      Navigator.pushNamed(
+        context,
+        '/menu-reservation',
+        arguments: {
+          'reservationData': reservationData,
+          'preorder': true,
+        },
+      );
 
-        _formKey.currentState?.reset();
-        setState(() {
-          _selectedDate = null;
-          _selectedTime = null;
-          _preorderMenu = false;
-        });
-      }
+      // Reset form setelah navigasi
+      _formKey.currentState?.reset();
+      setState(() {
+        _selectedDate = null;
+        _selectedTime = null;
+        _preorderMenu = false;
+      });
     });
   }
 
@@ -233,9 +224,7 @@ class ReservationFormState extends State<ReservationForm> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildSectionTitle('Tambahan'),
             const SizedBox(height: 16),
-            _buildPreorderToggle(),
             const SizedBox(height: 32),
             _buildSubmitButton(),
             const SizedBox(height: 40),
@@ -323,34 +312,6 @@ class ReservationFormState extends State<ReservationForm> {
     );
   }
 
-  Widget _buildPreorderToggle() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[300]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SwitchListTile(
-          title: const Text('Pesan Makanan Sekarang?'),
-          subtitle: const Text('Pilih menu sebelum datang'),
-          value: _preorderMenu,
-          onChanged: (value) {
-            if (mounted) {
-              setState(() => _preorderMenu = value);
-            }
-          },
-          secondary: Icon(
-            Icons.restaurant_menu_outlined,
-            color: Colors.orange[400],
-          ),
-          activeColor: Colors.orange[400],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -374,7 +335,7 @@ class ReservationFormState extends State<ReservationForm> {
                 ),
               )
             : const Text(
-                'BUAT RESERVASI',
+                'PILIH MENU',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
