@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-// Screens
+import 'package:tubes_flutter/screens/history_screen.dart';
 import 'package:tubes_flutter/screens/home_screen.dart';
 import 'package:tubes_flutter/screens/about_screen.dart';
 import 'package:tubes_flutter/screens/register_screen.dart';
@@ -11,12 +10,8 @@ import 'package:tubes_flutter/screens/profile_screen.dart';
 import 'package:tubes_flutter/screens/payment_screen.dart';
 import 'package:tubes_flutter/screens/menu_screen_reservation.dart'
     as menu_resv;
-
-// Models & Widgets
 import 'package:tubes_flutter/models/food_model.dart';
 import 'package:tubes_flutter/widgets/food_card.dart';
-
-// Constants
 import 'package:tubes_flutter/constants/app_colors.dart';
 import 'package:tubes_flutter/constants/app_styles.dart';
 
@@ -81,6 +76,7 @@ class MyApp extends StatelessWidget {
       '/reservation': (context) => const ReservationScreen(),
       '/profile': (context) => const ProfileScreen(),
       '/menu-reservation': (context) => const menu_resv.MenuScreenReservation(),
+      '/history': (context) => const HistoryScreen(),
       '/payment': (context) {
         final args =
             ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;

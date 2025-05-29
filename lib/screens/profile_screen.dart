@@ -611,6 +611,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+                          _buildModernInfoCard(
+                            icon: Icons.history_outlined,
+                            title: "Riwayat Pesanan",
+                            items: [
+                              _buildActionItem(
+                                'Lihat Riwayat Pesanan',
+                                Icons.arrow_forward_ios,
+                                action: () {
+                                  Navigator.pushNamed(context, '/history');
+                                },
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),

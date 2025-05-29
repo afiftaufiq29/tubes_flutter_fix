@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_flutter/screens/payment_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../services/mock_data.dart';
 import '../models/food_model.dart';
+import 'history_screen.dart'; // Untuk model OrderHistory
 
 // Helper function for Indonesian currency formatting
 String formatCurrency(double amount) {
@@ -32,6 +35,29 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
   FoodModel? getItemById(String id) {
     return MockData.foods.firstWhereOrNull((f) => f.id == id) ??
         MockData.drinks.firstWhereOrNull((d) => d.id == id);
+  }
+
+  // Fungsi untuk menyimpan riwayat pesanan
+  Future<void> _saveOrderHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> orderHistoryList =
+        prefs.getStringList('order_history') ?? [];
+
+    final newOrder = OrderHistory(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      date:
+          '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+      items: selectedItems.entries.map((entry) {
+        final item = getItemById(entry.key);
+        return OrderItem(
+          name: item?.name ?? 'Unknown',
+          quantity: entry.value,
+        );
+      }).toList(),
+    );
+
+    orderHistoryList.add(json.encode(newOrder.toJson()));
+    await prefs.setStringList('order_history', orderHistoryList);
   }
 
   @override
@@ -87,6 +113,9 @@ class _MenuScreenReservationState extends State<MenuScreenReservation> {
           selectedItems: selectedItems,
           itemsWithDetails: itemsWithDetails,
           totalAmount: totalAmount,
+          onConfirm: () async {
+            await _saveOrderHistory(); // Simpan riwayat sebelum pembayaran
+          },
         ),
       );
     }
@@ -336,6 +365,7 @@ class PaymentSummarySheet extends StatelessWidget {
   final Map<String, int> selectedItems;
   final List<Map<String, dynamic>> itemsWithDetails;
   final double totalAmount;
+  final Future<void> Function()? onConfirm;
 
   const PaymentSummarySheet({
     super.key,
@@ -343,6 +373,7 @@ class PaymentSummarySheet extends StatelessWidget {
     required this.selectedItems,
     required this.itemsWithDetails,
     required this.totalAmount,
+    this.onConfirm,
   });
 
   @override
@@ -418,18 +449,23 @@ class PaymentSummarySheet extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PaymentScreen(
-                          reservationData: reservationData,
-                          selectedItems: itemsWithDetails,
-                          totalAmount: totalAmount,
+                  onPressed: () async {
+                    if (onConfirm != null) {
+                      await onConfirm!();
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentScreen(
+                            reservationData: reservationData,
+                            selectedItems: itemsWithDetails,
+                            totalAmount: totalAmount,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
