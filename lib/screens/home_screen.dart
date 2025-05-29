@@ -29,6 +29,14 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _mapExpanded = false;
   double _mapHeight = 150;
 
+  // Fungsi untuk format mata uang Rupiah
+  String _formatCurrency(int amount) {
+    return 'Rp ${amount.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        )}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -149,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ...matchingItems.map((menu) => _buildMenuItem(
                 menu.name,
                 menu.imageUrl,
-                menu.price.toString(),
+                menu.price, // Menggunakan nilai double langsung
                 4.5,
                 menu.description,
                 true,
@@ -481,7 +489,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ...MockData.foods.take(3).map((food) => _buildMenuItem(
                             food.name,
                             food.imageUrl,
-                            food.price.toString(),
+                            food.price, // Menggunakan nilai double langsung
                             4.5,
                             food.description,
                             false)),
@@ -499,7 +507,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             _buildMenuItem(
                                 drink.name,
                                 drink.imageUrl,
-                                drink.price.toString(),
+                                drink
+                                    .price, // Menggunakan nilai double langsung
                                 4.5,
                                 drink.description,
                                 false)),
@@ -519,8 +528,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuItem(String title, String imagePath, String price,
+  Widget _buildMenuItem(String title, String imagePath, double priceValue,
       double rating, String description, bool isHighlighted) {
+    // Format harga menjadi Rupiah
+    final formattedPrice = _formatCurrency(priceValue.toInt());
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 16),
@@ -533,7 +545,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: InkWell(
         onTap: () {
-          _showFoodDetailDialog(title, imagePath, price, rating, description);
+          _showFoodDetailDialog(
+              title,
+              imagePath,
+              priceValue, // Mengirim nilai double untuk format
+              rating,
+              description);
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -573,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Rp $price',
+                      formattedPrice, // Menggunakan harga yang sudah diformat
                       style: TextStyle(
                         color: Colors.orange[400],
                         fontWeight: FontWeight.bold,
@@ -607,8 +624,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showFoodDetailDialog(String title, String imagePath, String price,
+  void _showFoodDetailDialog(String title, String imagePath, double priceValue,
       double rating, String description) {
+    // Format harga menjadi Rupiah
+    final formattedPrice = _formatCurrency(priceValue.toInt());
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -673,7 +693,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 16),
                         Text(
-                          "Rp $price",
+                          formattedPrice, // Menggunakan harga yang sudah diformat
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

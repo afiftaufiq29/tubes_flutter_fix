@@ -26,8 +26,6 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   // Animations
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<Color?> _buttonColorAnimation;
-  late Animation<double> _gridItemAnimation;
   late Animation<double> _pageTransitionAnimation;
 
   // For card tap animation
@@ -77,15 +75,6 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
 
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
-    );
-
-    _buttonColorAnimation = ColorTween(
-      begin: Colors.grey[300],
-      end: Colors.orange[400],
-    ).animate(_buttonController);
-
-    _gridItemAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _gridController, curve: Curves.easeInOut),
     );
 
     _pageTransitionAnimation = Tween<double>(begin: 0, end: 1).animate(

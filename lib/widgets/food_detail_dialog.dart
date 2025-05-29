@@ -7,7 +7,6 @@ class FoodDetailDialog extends StatelessWidget {
 
   const FoodDetailDialog({super.key, required this.food});
 
-  // Fungsi untuk formatting harga Indonesia
   String _formatHarga(int harga) {
     return 'Rp ${harga.toString().replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -17,51 +16,7 @@ class FoodDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Deskripsi menggoda berdasarkan nama makanan
     String foodDescription = food.description;
-
-    switch (food.name.toLowerCase()) {
-      case 'nasi goreng':
-        foodDescription =
-            'Nasi goreng khas Indonesia yang gurih dan kaya rasa, dimasak dengan bumbu rempah dan kecap manis, disajikan panas dengan telur dan kerupuk.';
-        break;
-      case 'sate ayam':
-        foodDescription =
-            'Sate ayam empuk yang dibakar sempurna, disiram bumbu kacang gurih dan kecap manis, cocok disantap bersama lontong.';
-        break;
-      case 'rendang':
-        foodDescription =
-            'Rendang daging sapi khas Minang yang dimasak lama hingga empuk, berbalut bumbu rempah yang kaya dan pedas.';
-        break;
-      case 'gado-gado':
-        foodDescription =
-            'Gado-gado segar dengan campuran sayuran rebus, tahu, tempe, dan telur, disiram saus kacang kental yang lezat.';
-        break;
-      case 'soto ayam':
-        foodDescription =
-            'Soto ayam berkuah kuning yang harum dan gurih, berisi ayam suwir, telur, dan soun, cocok disantap hangat-hangat.';
-        break;
-      case 'bakso':
-        foodDescription =
-            'Bakso daging sapi kenyal dalam kuah kaldu gurih, disajikan dengan mie, tahu, dan taburan bawang goreng.';
-        break;
-      case 'pempek':
-        foodDescription =
-            'Pempek Palembang yang renyah di luar dan lembut di dalam, disajikan dengan kuah cuko pedas manis yang khas.';
-        break;
-      case 'ayam betutu':
-        foodDescription =
-            'Ayam Betutu khas Bali yang dimasak dengan bumbu rempah lengkap, disajikan utuh dan sangat menggugah selera.';
-        break;
-      case 'ketoprak':
-        foodDescription =
-            'Ketoprak khas Betawi dengan bihun, tahu, dan lontong disiram saus kacang kental, disajikan dengan kerupuk renyah.';
-        break;
-      case 'rawon':
-        foodDescription =
-            'Rawon daging sapi berkuah hitam dari kluwek, aromatik dan lezat, disajikan dengan nasi, sambal, dan telur asin.';
-        break;
-    }
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -94,7 +49,7 @@ class FoodDetailDialog extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins', // Tambahkan font Poppins
+                      fontFamily: 'Poppins',
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -102,21 +57,81 @@ class FoodDetailDialog extends StatelessWidget {
                     foodDescription,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontFamily: 'Poppins', // Tambahkan font Poppins
+                      fontFamily: 'Poppins',
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _formatHarga(
-                        food.price.toInt()), // Gunakan fungsi format harga
+                    _formatHarga(food.price.toInt()),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.orange,
-                      fontFamily: 'Poppins', // Tambahkan font Poppins
+                      fontFamily: 'Poppins',
                     ),
                   ),
+
+                  // Tampilkan rating rata-rata
+                  if (food.reviews.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 24),
+                        const SizedBox(width: 4),
+                        Text(
+                          food.averageRating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "(${food.reviews.length} ulasan)",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // Bagian ulasan pengguna
+                  if (food.reviews.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Apa kata mereka tentang menu ini?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Scrollbar(
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: food.reviews.length,
+                          itemBuilder: (context, index) {
+                            final review = food.reviews[index];
+                            return _buildReviewCard(review);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
@@ -141,5 +156,60 @@ class FoodDetailDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildReviewCard(Review review) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Tampilkan bintang
+                ...List.generate(5, (index) {
+                  return Icon(
+                    index < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    color: Colors.amber,
+                    size: 20,
+                  );
+                }),
+                const Spacer(),
+                Text(
+                  _formatDate(review.date),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              review.comment,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
   }
 }

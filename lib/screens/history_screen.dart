@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/food_model.dart';
+import '../services/mock_data.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -34,6 +36,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final List<String> orderHistoryList =
         orderHistory.map((order) => json.encode(order.toJson())).toList();
     await prefs.setStringList('order_history', orderHistoryList);
+  }
+
+  Future<void> _saveFoodReview(OrderItem item) async {
+    // Simpan ulasan ke menu yang sesuai
+    final foods = MockData.foods;
+    final drinks = MockData.drinks;
+    final allItems = [...foods, ...drinks];
+
+    final targetItem = allItems.firstWhere(
+      (element) => element.name == item.name,
+      orElse: () => FoodModel(
+        id: '-1',
+        name: item.name,
+        description: '',
+        price: 0,
+        imageUrl: '',
+      ),
+    );
+
+    if (targetItem.id != -1) {
+      final newReview = Review(
+        rating: item.rating!,
+        comment: item.review!,
+        date: DateTime.now().toString(),
+      );
+
+      // Tambahkan ulasan baru
+      targetItem.reviews.add(newReview);
+
+      // Simpan ke shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'food_reviews_${targetItem.id}';
+      final reviewsJson =
+          targetItem.reviews.map((r) => json.encode(r.toJson())).toList();
+      await prefs.setStringList(key, reviewsJson);
+    }
   }
 
   @override
@@ -111,7 +149,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildMenuItemCard(OrderItem item) {
-    // Gunakan controller untuk mengelola input teks
     TextEditingController reviewController = TextEditingController(
       text: item.review ?? '',
     );
@@ -197,7 +234,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: TextField(
-                  controller: reviewController, // Gunakan controller
+                  controller: reviewController,
                   maxLines: 5,
                   minLines: 3,
                   decoration: const InputDecoration(
@@ -205,9 +242,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(16),
                   ),
-                  onChanged: (value) {
-                    // Jangan simpan ke state di sini, simpan hanya saat tombol diklik
-                  },
                 ),
               ),
               const SizedBox(height: 20),
@@ -225,12 +259,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       return;
                     }
 
-                    // Simpan ulasan dari controller ke item
                     setState(() {
                       item.review = reviewController.text;
                     });
 
                     await _saveOrderHistory();
+                    await _saveFoodReview(item);
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

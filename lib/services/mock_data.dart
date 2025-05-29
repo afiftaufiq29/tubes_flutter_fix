@@ -14,15 +14,15 @@ class MockData {
         FoodModel(
           id: '2',
           name: 'Nasi Goreng',
-          description: 'Nasi goreng dengan bumbu tradisional',
-          price: 30000,
+          description: 'Nasi goreng spesial dengan telur dan ayam',
+          price: 25000,
           imageUrl: 'assets/images/food_images/nasi_goreng.jpg',
         ),
         FoodModel(
           id: '3',
           name: 'Sate Ayam',
           description: 'Sate ayam dengan bumbu kacang spesial',
-          price: 35000,
+          price: 30000,
           imageUrl: 'assets/images/food_images/sate.jpg',
         ),
         FoodModel(

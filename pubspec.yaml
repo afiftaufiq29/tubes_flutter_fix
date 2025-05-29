@@ -37,7 +37,7 @@ dependencies:
   lottie: ^2.7.0
   shared_preferences: ^2.2.2
   font_awesome_flutter: ^10.5.0
-  image_picker: ^0.8.7
+  image_picker: ^1.0.4
   path_provider: ^2.1.1
   google_fonts: ^6.1.0
   
@@ -74,6 +74,8 @@ flutter:
     - assets/animations/success_check.json
     - assets/animations/loading_hand.json
     - assets/animations/centang.json
+    - assets/images/qr_code.jpg
+    
   fonts:
     - family: FontAwesome
       fonts:

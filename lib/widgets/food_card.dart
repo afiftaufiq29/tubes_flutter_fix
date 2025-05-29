@@ -26,7 +26,6 @@ class FoodCard extends StatelessWidget {
         height: 210,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
             ClipRRect(
               borderRadius:
@@ -42,7 +41,6 @@ class FoodCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     food.name,
@@ -68,16 +66,36 @@ class FoodCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    _formatHarga(
-                        food.price.toInt()), // Menggunakan fungsi format
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.orange,
-                      height: 1.2,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatHarga(food.price.toInt()),
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                          height: 1.2,
+                        ),
+                      ),
+                      if (food.reviews.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              food.averageRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'Poppins',
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ],
               ),

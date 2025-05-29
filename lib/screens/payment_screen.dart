@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lottie/lottie.dart';
 import 'package:tubes_flutter/screens/home_screen.dart';
 import '../services/mock_data.dart';
@@ -23,7 +25,133 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   bool _isPaid = false;
   bool _showThankYou = false;
+  File? _paymentProof;
   final Color _primaryColor = Colors.orange[400]!;
+  final ImagePicker _picker = ImagePicker();
+
+  void _showUploadConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Konfirmasi Pembayaran"),
+        content: const Text("Silahkan Kirim Bukti Transfer Anda"),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showUploadProofDialog();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'UNGGAH BUKTI',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUploadProofDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Unggah Bukti Pembayaran',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih sumber bukti pembayaran',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSourceButton(
+                    icon: Icons.camera_alt,
+                    label: 'KAMERA',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _pickPaymentProof(ImageSource.camera);
+                    },
+                  ),
+                  _buildSourceButton(
+                    icon: Icons.photo_library,
+                    label: 'GALERI',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _pickPaymentProof(ImageSource.gallery);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'BATAL',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: _primaryColor.withOpacity(0.1),
+          child: IconButton(
+            icon: Icon(icon, size: 30, color: _primaryColor),
+            onPressed: onPressed,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: _primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
 
   dynamic _findItemById(String id) {
     try {
@@ -46,6 +174,124 @@ class _PaymentScreenState extends State<PaymentScreen> {
         )}';
   }
 
+  Future<void> _pickPaymentProof(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image != null) {
+        setState(() {
+          _paymentProof = File(image.path);
+        });
+        _showProofPreview();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memilih gambar')),
+      );
+    }
+  }
+
+  void _showProofPreview() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Bukti Pembayaran',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_paymentProof != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(_paymentProof!, height: 200),
+                ),
+              const SizedBox(height: 20),
+              Text(
+                'Total: ${_formatCurrency(widget.totalAmount.toInt())}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showUploadProofDialog();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: _primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: Text(
+                          'GANTI BUKTI',
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          setState(() => _isPaid = true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: const Text(
+                          'KONFIRMASI',
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -53,12 +299,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
         title: const Text("Konfirmasi"),
         content: const Text("Apakah Anda yakin pembayaran telah selesai?"),
         actions: [
-          _buildDialogButton('Tidak', () => Navigator.of(context).pop(),
-              isPrimary: false),
-          _buildDialogButton('Ya', () {
-            Navigator.of(context).pop();
-            _showThankYouPopup();
-          }),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildDialogButton('TIDAK', () => Navigator.of(context).pop(),
+                  isPrimary: false),
+              _buildDialogButton('YA', () {
+                Navigator.of(context).pop();
+                _showThankYouPopup();
+              }),
+            ],
+          ),
         ],
       ),
     );
@@ -74,7 +325,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           backgroundColor: isPrimary ? _primaryColor : Colors.grey[300],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
         child: Text(
@@ -82,6 +333,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: TextStyle(
             color: isPrimary ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
         ),
       ),
@@ -134,7 +386,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     children: [
-                      // Responsive Order Summary Card
                       Container(
                         margin: const EdgeInsets.all(16),
                         child: Card(
@@ -156,7 +407,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                // Item List with automatic sizing
                                 LayoutBuilder(
                                   builder: (context, constraints) {
                                     return ConstrainedBox(
@@ -236,9 +486,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                         ),
                       ),
-                      // Payment Methods Section
                       _buildPaymentMethodsSection(),
-                      // Spacer for bottom button
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -246,7 +494,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ],
           ),
-          // Fixed Payment Button at bottom
           Positioned(
             bottom: 0,
             left: 0,
@@ -330,7 +577,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ),
           child: Text(
-            _isPaid ? 'SELESAI' : 'BAYAR SEKARANG',
+            _isPaid ? 'SELESAI' : 'SELESAI',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -364,7 +611,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Gunakan animasi Lottie
                 SizedBox(
                   height: 100,
                   width: 100,
@@ -497,7 +743,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text('a.n Restoran Sejahtera'),
+                    const Text('a.n Masakan Nusantara'),
                   ],
                 ),
               ),
@@ -519,10 +765,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: _primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: Text(
                           'TUTUP',
-                          style: TextStyle(color: _primaryColor),
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -534,14 +786,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          setState(() => _isPaid = true);
+                          _showUploadConfirmationDialog();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: const Text(
                           'SUDAH TRANSFER',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -595,7 +853,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text('a.n Restoran Sejahtera'),
+                    const Text('a.n Masakan Nusantara'),
                   ],
                 ),
               ),
@@ -617,10 +875,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: _primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: Text(
                           'TUTUP',
-                          style: TextStyle(color: _primaryColor),
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -632,14 +896,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          setState(() => _isPaid = true);
+                          _showUploadConfirmationDialog();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: const Text(
                           'SUDAH BAYAR',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -658,147 +928,195 @@ class _PaymentScreenState extends State<PaymentScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('QRIS Payment'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/qr_code.png',
-                    height: 200,
-                    width: 200,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _formatCurrency(widget.totalAmount.toInt()),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+          title: const Text('QRIS Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Image.asset(
+                      'assets/images/qr_code.jpg',
+                      height: 200,
+                      width: 200,
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatCurrency(widget.totalAmount.toInt()),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Scan QR code di atas untuk melakukan pembayaran',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.access_time, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Berlaku hingga: ${_getExpiryTime()}',
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Scan QR code di atas untuk melakukan pembayaran',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
+            ],
+          ),
+          actions: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                const Icon(Icons.access_time, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  'Berlaku hingga: ${_getExpiryTime()}',
-                  style: const TextStyle(fontSize: 12),
+                Expanded(
+                  // Gunakan Expanded agar tombol melebar
+                  child: SizedBox(
+                    height: 45, // Tinggi konsisten dengan dialog lain
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _primaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'TUTUP',
+                        style: TextStyle(
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  // Gunakan Expanded agar tombol melebar
+                  child: SizedBox(
+                    height: 45, // Tinggi konsisten dengan dialog lain
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showUploadConfirmationDialog();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: 100,
-            height: 40,
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: _primaryColor),
-              ),
-              child: Text(
-                'TUTUP',
-                style: TextStyle(color: _primaryColor),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 100,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() => _isPaid = true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primaryColor,
-              ),
-              child: const Text(
-                'SUDAH BAYAR',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
+          ]),
     );
   }
 
   void _showCODDialog() {
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bayar di Tempat'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.store, size: 50, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              'Silahkan Bayar Melalui Kasir',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Bayar di Tempat'),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.store, size: 50, color: Colors.orange),
+                  SizedBox(height: 16),
+                  Text(
+                    'Silahkan Bayar Melalui Kasir',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Tunjukkan bukti reservasi Anda kepada kasir',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Tunjukkan bukti reservasi Anda kepada kasir',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: 100,
-            height: 40,
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: _primaryColor),
-              ),
-              child: Text(
-                'TUTUP',
-                style: TextStyle(color: _primaryColor),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 100,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() => _isPaid = true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primaryColor,
-              ),
-              child: const Text('OK', style: TextStyle(color: Colors.white)),
-            ),
-          ),
-        ],
-      ),
-    );
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      // Gunakan Expanded agar tombol melebar
+                      child: SizedBox(
+                        height: 45, // Tinggi konsisten dengan dialog lain
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: _primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'TUTUP',
+                            style: TextStyle(
+                              color: _primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      // Gunakan Expanded agar tombol melebar
+                      child: SizedBox(
+                        height: 45, // Tinggi konsisten dengan dialog lain
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _isPaid = true;
+                            });
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'OK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ));
   }
 
   String _getExpiryTime() {
